@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+/* ── Material Design 3 color tokens ─────────────────────────── */
+@theme {
+  /* Primary */
+  --color-primary: #2a14b4;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #eaddff;
+  --color-on-primary-container: #4f378b;
+
+  /* Primary – dark-theme overrides (used inside sidebar) */
+  --color-primary-container-dark: #6750a4;
+  --color-on-primary-container-dark: #efc5ff;
+
+  /* Secondary */
+  --color-secondary: #625b71;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #e8def8;
+  --color-on-secondary-container: #1d192b;
+
+  /* Tertiary */
+  --color-tertiary: #7d5260;
+  --color-on-tertiary: #ffffff;
+
+  /* Surface */
+  --color-surface: #fcf8ff;
+  --color-on-surface: #1b1b24;
+  --color-surface-variant: #e4e1ed;
+  --color-on-surface-variant: #464555;
+
+  /* Surface containers */
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f5f2fa;
+  --color-surface-container: #f0ecf9;
+  --color-surface-container-high: #eae7f5;
+  --color-surface-container-highest: #e4e1ed;
+
+  /* Inverse */
+  --color-inverse-surface: #213145;
+  --color-on-inverse-surface: #f3efff;
+
+  /* Outline */
+  --color-outline: #7a7690;
+  --color-outline-variant: #c7c4d8;
+
+  /* Error */
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* Tertiary fixed (for mobile alert) */
+  --color-tertiary-fixed: #ffdbcd;
+  --color-on-tertiary-fixed: #360f00;
+
+  /* Chart-specific colors */
+  --color-chart-yellow: #eab308;
+  --color-chart-green: #22c55e;
+  --color-chart-red: #ef4444;
+
+  /* Background (light mode) */
+  --color-background: #f8f9ff;
+  --color-on-background: #0b1c30;
+
+  /* Custom layout tokens */
+  --spacing-sidebar-width: 260px;
+  --spacing-header-height: 64px;
+  --spacing-card-padding: 20px;
+  --spacing-gutter: 24px;
+
+  /* Typography scale (MD3) */
+  --font-display-lg: 500 57px/64px 'Inter', system-ui;
+  --font-display-md: 500 45px/52px 'Inter', system-ui;
+  --font-headline-lg: 400 28px/36px 'Inter', system-ui;
+  --font-headline-md: 400 24px/32px 'Inter', system-ui;
+  --font-title-md: 500 16px/24px 'Inter', system-ui;
+  --font-title-sm: 500 14px/20px 'Inter', system-ui;
+  --font-body-lg: 400 16px/24px 'Inter', system-ui;
+  --font-body-md: 400 14px/20px 'Inter', system-ui;
+  --font-body-sm: 400 12px/16px 'Inter', system-ui;
+  --font-label-lg: 500 14px/20px 'Inter', system-ui;
+  --font-label-md: 500 12px/16px 'Inter', system-ui;
+  --font-label-caps: 500 11px/16px 'Inter', system-ui;
+  --font-data-mono: 400 14px/20px 'JetBrains Mono', monospace;
+}
+
+/* Global styles for AI智能通信故障检测与诊断系统 */
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* Scrollbar styling for sidebar and main content */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dark scrollbar for sidebar */
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Material Symbols base style */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Pulse animation for notification dot */
+@keyframes pulse-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+}
+
+.animate-pulse-scale {
+  animation: pulse-scale 2s ease-in-out infinite;
+}
+
+/* Fade-in animation */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+/* Border flash animation (for review badge) */
+@keyframes border-flash {
+  0%, 100% { border-color: rgba(186, 26, 26, 0.3); box-shadow: 0 0 0 rgba(186, 26, 26, 0); }
+  50% { border-color: rgba(186, 26, 26, 1); box-shadow: 0 0 12px rgba(186, 26, 26, 0.4); }
+}
+
+.animate-border-flash {
+  animation: border-flash 1.5s infinite ease-in-out;
+}
+
+/* Shake-enter animation (for mobile alert) */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-shake-enter {
+  animation: shake 0.15s ease-in-out 0.2s forwards;
+}
+
+/* Grow-up animation (for bar chart cells) */
+@keyframes grow-up {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+.animate-grow-up {
+  transform-origin: bottom;
+  transform: scaleY(0);
+  animation: grow-up 400ms ease-out forwards;
+}
+
+/* Phone mockup shadow */
+.device-shadow {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+/* Custom font utility helpers */
+.font-display-lg   { font: var(--font-display-lg); }
+.font-display-md   { font: var(--font-display-md); }
+.font-headline-lg  { font: var(--font-headline-lg); }
+.font-headline-md  { font: var(--font-headline-md); }
+.font-title-md     { font: var(--font-title-md); }
+.font-title-sm     { font: var(--font-title-sm); }
+.font-body-lg      { font: var(--font-body-lg); }
+.font-body-md      { font: var(--font-body-md); }
+.font-body-sm      { font: var(--font-body-sm); }
+.font-label-lg     { font: var(--font-label-lg); }
+.font-label-md     { font: var(--font-label-md); }
+.font-label-caps   { font: var(--font-label-caps); }
+.font-data-mono    { font: var(--font-data-mono); }

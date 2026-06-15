@@ -1,0 +1,29 @@
+{
+  "source_datasets": {
+    "TelecomTS": {
+      "jsonl_files": 33,
+      "real_jsonl_files": 12,
+      "lfs_pointer_jsonl_files": 21,
+      "jsonl_samples": 1235,
+      "raw_metric_rows": 239994,
+      "scenarios_with_labels": 12
+    },
+    "Kaggle5GRootCause": {
+      "parsed_scenarios": 2400,
+      "skipped_scenarios": 0,
+      "network_rows": 24000,
+      "base_station_rows": 188
+    }
+  },
+  "total_metric_rows": 263994,
+  "generated_at": "2026-06-15T19:53:56",
+  "outputs": {
+    "network_metrics": "network_metrics.csv",
+    "fault_samples": "fault_samples.csv",
+    "diagnosis_knowledge": "diagnosis_knowledge.csv",
+    "base_stations": "base_stations.csv",
+    "location_samples": "location_samples.csv",
+    "root_cause_samples": "root_cause_samples.csv"
+  },
+  "fault_type_mapping_version": "phase1_data_system_design.md"
+}

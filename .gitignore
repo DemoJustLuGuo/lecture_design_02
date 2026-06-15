@@ -1,0 +1,28 @@
+# Python caches and environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node dependencies and frontend build outputs
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# Local IDE and tool state
+.idea/
+.vscode/
+.stitch/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
