@@ -7,6 +7,7 @@ const navItems = [
   { path: '/map',      label: '故障地图', icon: 'map'                  },
   { path: '/metrics',  label: '模型评估', icon: 'analytics'            },
   { path: '/mobile-alert', label: '移动预警', icon: 'notifications_active' },
+  { path: '/settings', label: '系统设置', icon: 'settings' },
 ]
 
 export default function Sidebar() {

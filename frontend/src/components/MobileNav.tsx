@@ -5,6 +5,7 @@ const tabs = [
   { path: '/stations', label: '基站',  icon: 'router'       },
   { path: '/faults',   label: '故障',  icon: 'history_toggle_off' },
   { path: '/map',      label: '地图',  icon: 'map'          },
+  { path: '/settings', label: '设置',  icon: 'settings'     },
 ]
 
 export default function MobileNav() {

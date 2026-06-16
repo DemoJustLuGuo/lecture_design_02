@@ -13,6 +13,7 @@ const FaultMap = lazy(() => import('./pages/FaultMap'))
 const Diagnosis = lazy(() => import('./pages/Diagnosis'))
 const ModelEval = lazy(() => import('./pages/ModelEval'))
 const MobileAlert = lazy(() => import('./pages/MobileAlert'))
+const Settings = lazy(() => import('./pages/Settings'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 /* ── Loading fallback ────────────────────────────────────────── */
@@ -79,6 +80,10 @@ export const router = createBrowserRouter([
       {
         path: 'mobile-alert',
         element: <SuspensePage component={MobileAlert} />,
+      },
+      {
+        path: 'settings',
+        element: <SuspensePage component={Settings} />,
       },
       {
         path: '*',

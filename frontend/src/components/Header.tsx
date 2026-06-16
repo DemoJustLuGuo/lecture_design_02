@@ -77,7 +77,7 @@ export default function Header() {
           type="button"
           aria-label="设置"
           className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container"
-          onClick={() => showMessage('当前演示版暂无独立设置页。')}
+          onClick={() => navigate('/settings')}
         >
           <span className="material-symbols-outlined text-[20px]">settings</span>
         </button>

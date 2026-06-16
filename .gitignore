@@ -27,3 +27,6 @@ Thumbs.db
 *.tmp
 *.temp
 backend/data/generated_preview/
+
+# Local demo-only LLM configuration
+frontend/public/llm-config.local.json
