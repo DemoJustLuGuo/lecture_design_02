@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { BreadcrumbNav } from '@/components/BreadcrumbNav'
-import { fetchDiagnosis } from '@/api/diagnosis'
+import { enhanceDiagnosis, fetchDiagnosis } from '@/api/diagnosis'
+import { loadStoredLlmConfig, normalizeLlmConfig, saveLlmConfig } from '@/utils/llmConfig'
 import type { DiagnosisAction, DiagnosisDisplay, DiagnosisRecord } from '@/types/api'
 
 /* ── Sub-components ──────────────────────────────────────── */
@@ -63,7 +64,9 @@ export default function Diagnosis() {
   const { id: faultId } = useParams<{ id: string }>()
   const [data, setData] = useState<DiagnosisRecord | null>(null)
   const [loading, setLoading] = useState(true)
+  const [enhancing, setEnhancing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     if (!faultId) return
@@ -73,6 +76,40 @@ export default function Diagnosis() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [faultId])
+
+  const handleEnhanceDiagnosis = async () => {
+    if (!faultId) return
+    setEnhancing(true)
+    setNotice(null)
+    const nextConfig = normalizeLlmConfig(loadStoredLlmConfig())
+    if (!nextConfig.api_key) {
+      setEnhancing(false)
+      setNotice('请先到设置页填写大模型 API Key，再执行 AI 增强诊断。')
+      return
+    }
+    saveLlmConfig(nextConfig)
+    try {
+      const enhanced = await enhanceDiagnosis(faultId, {
+        base_url: nextConfig.base_url,
+        api_key: nextConfig.api_key,
+        model: nextConfig.model,
+        timeout_seconds: nextConfig.timeout_seconds,
+      })
+      setData(enhanced)
+      const display = enhanced.display ?? fallbackDisplay(enhanced)
+      if (display.llm_enhanced) {
+        setNotice(`大模型增强诊断已生成${display.llm_model ? `：${display.llm_model}` : ''}。`)
+      } else if (display.llm_error) {
+        setNotice(`大模型增强不可用，已保留规则诊断：${display.llm_error}`)
+      } else {
+        setNotice('大模型增强未启用，已保留规则诊断。')
+      }
+    } catch (e) {
+      setNotice(e instanceof Error ? `大模型增强失败，已保留当前规则诊断：${e.message}` : '大模型增强失败，已保留当前规则诊断。')
+    } finally {
+      setEnhancing(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -116,6 +153,17 @@ export default function Diagnosis() {
         </div>
         <div className="flex items-center gap-3">
           <button
+            className="px-4 py-2 rounded-lg bg-primary-container text-primary border border-primary/20 hover:bg-primary-container/80 transition-colors font-body-sm text-body-sm flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-70"
+            type="button"
+            onClick={handleEnhanceDiagnosis}
+            disabled={enhancing}
+          >
+            <span className={`material-symbols-outlined text-[18px] ${enhancing ? 'animate-spin-slow' : ''}`}>
+              {enhancing ? 'progress_activity' : 'auto_awesome'}
+            </span>
+            {enhancing ? '增强中' : 'AI增强诊断'}
+          </button>
+          <button
             className="px-4 py-2 rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors font-body-sm text-body-sm flex items-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
@@ -129,6 +177,21 @@ export default function Diagnosis() {
           </button>
         </div>
       </div>
+
+      {notice ? (
+        <div className={[
+          'border rounded-lg px-4 py-3 text-body-sm font-body-sm flex items-start gap-2',
+          data?.display?.llm_enhanced
+            ? 'bg-tertiary-container border-tertiary/30 text-on-tertiary-container'
+            : 'bg-surface-container-low border-outline-variant text-on-surface-variant',
+        ].join(' ')}
+        >
+          <span className="material-symbols-outlined text-[18px]">
+            {data?.display?.llm_enhanced ? 'auto_awesome' : 'info'}
+          </span>
+          <span>{notice}</span>
+        </div>
+      ) : null}
 
       {/* ── Top: Fault Info Card ──────────────────────────── */}
       <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col gap-4 relative overflow-hidden">
@@ -152,6 +215,12 @@ export default function Diagnosis() {
               <span className="material-symbols-outlined text-[14px]">psychology</span>
               {confidence == null ? display.source_label : `模型置信度 ${confidence.toFixed(1)}%`}
             </span>
+            {display.llm_enhanced ? (
+              <span className="px-2.5 py-1 rounded-full bg-tertiary-container text-on-tertiary-container font-label-caps text-label-caps border border-tertiary/20 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                {display.llm_model ?? 'LLM'}
+              </span>
+            ) : null}
           </div>
         </div>
 

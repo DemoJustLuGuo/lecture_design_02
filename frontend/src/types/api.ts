@@ -202,6 +202,9 @@ export interface DiagnosisDisplay {
   evidence: string[]
   review_required: boolean
   review_reason: string
+  llm_enhanced?: boolean
+  llm_model?: string | null
+  llm_error?: string | null
 }
 
 export interface DiagnosisRecord {
@@ -215,6 +218,7 @@ export interface DiagnosisRecord {
   created_at: string | null
   display?: DiagnosisDisplay
   fault: FaultDetail
+  collection_fields?: Record<string, string[]>
 }
 
 /** ── Model Evaluation ──────────────────────────────────── */

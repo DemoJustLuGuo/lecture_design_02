@@ -217,11 +217,9 @@ def build_diagnosis_display(fault: dict[str, Any], diagnosis: dict[str, Any]) ->
         evidence.append(f"定位误差约 {float(fault['localization_error_m']):.1f} m")
 
     review_required, review_reason = _review_reason(fault, diagnosis, rule)
-    source_label = "AI在线诊断" if str(fault.get("fault_id") or "").startswith("AI_") else "历史样本诊断"
-
     return {
         "fault_type": fault_type,
-        "source_label": source_label,
+        "source_label": "规则诊断",
         "root_cause": root_cause,
         "key_symptoms": list(rule["key_symptoms"]),
         "suggested_actions": list(rule["actions"]),
@@ -229,4 +227,6 @@ def build_diagnosis_display(fault: dict[str, Any], diagnosis: dict[str, Any]) ->
         "evidence": evidence,
         "review_required": review_required,
         "review_reason": review_reason,
+        "llm_enhanced": False,
+        "llm_model": None,
     }
