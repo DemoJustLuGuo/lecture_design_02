@@ -90,7 +90,33 @@ CREATE TABLE model_evaluations (
   created_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS data_import_batches (
+  batch_id TEXT PRIMARY KEY,
+  source_name TEXT NOT NULL,
+  batch_note TEXT,
+  network_metrics_filename TEXT,
+  base_stations_filename TEXT,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  inserted_count INTEGER DEFAULT 0,
+  skipped_count INTEGER DEFAULT 0,
+  error_count INTEGER DEFAULT 0,
+  status TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS data_import_errors (
+  error_id TEXT PRIMARY KEY,
+  batch_id TEXT NOT NULL,
+  table_name TEXT NOT NULL,
+  row_number INTEGER,
+  error_reason TEXT NOT NULL,
+  raw_row TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (batch_id) REFERENCES data_import_batches(batch_id)
+);
+
 CREATE INDEX idx_network_metrics_station ON network_metrics(station_id);
 CREATE INDEX idx_network_metrics_fault ON network_metrics(fault_type_cn, is_fault);
 CREATE INDEX idx_fault_logs_type ON fault_logs(fault_type_cn, fault_level);
 CREATE INDEX idx_fault_logs_station ON fault_logs(station_id);
+CREATE INDEX IF NOT EXISTS idx_data_import_errors_batch ON data_import_errors(batch_id);

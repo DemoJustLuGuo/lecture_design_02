@@ -3,6 +3,8 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from backend.src.api.app import create_app
+from backend.src.api.routes import faults as faults_route
+from backend.src.database.db import DATABASE_PATH, get_connection
 
 
 client = TestClient(create_app())
@@ -24,12 +26,22 @@ def test_dashboard_summary_api() -> None:
     assert body["data"]["fault_count"] > 0
 
 
+def test_dashboard_fault_trend_api() -> None:
+    body = assert_success(client.get("/api/dashboard/fault-trend?days=7"))
+
+    assert body["data"]["days"] == 7
+    assert len(body["data"]["items"]) == 7
+    assert {"date", "label", "total", "severe"}.issubset(body["data"]["items"][0])
+
+
 def test_stations_and_station_detail_api() -> None:
     stations = assert_success(client.get("/api/stations?limit=1"))["data"]
     station_id = stations[0]["station_id"]
     detail = assert_success(client.get(f"/api/stations/{station_id}"))["data"]
 
     assert detail["station_id"] == station_id
+    assert "recent_metrics" in detail
+    assert "recent_faults" in detail
 
 
 def test_faults_detail_and_diagnosis_api() -> None:
@@ -41,6 +53,64 @@ def test_faults_detail_and_diagnosis_api() -> None:
 
     assert detail["fault_id"] == fault_id
     assert diagnosis["fault"]["fault_id"] == fault_id
+    assert diagnosis["display"]["root_cause"]
+    assert diagnosis["display"]["suggested_actions"]
+
+
+def test_fault_status_update_flow_api() -> None:
+    fault_id = "TEST_STATUS_FLOW"
+    with get_connection(DATABASE_PATH) as connection:
+        connection.execute(
+            """
+            INSERT OR REPLACE INTO fault_logs (
+              fault_id, source_dataset, scenario_id, station_id, detected_at,
+              fault_type_raw, fault_type_cn, fault_level, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (fault_id, "unit", "unit", "UNIT_BS", "2026-06-16T10:00:00", "unit", "信道干扰", "一般", "未处理"),
+        )
+        connection.commit()
+
+    try:
+        processing = assert_success(client.patch(f"/api/faults/{fault_id}/status", json={"status": "处理中"}))["data"]
+        resolved = assert_success(client.patch(f"/api/faults/{fault_id}/status", json={"status": "已处理"}))["data"]
+        repeat = assert_success(client.patch(f"/api/faults/{fault_id}/status", json={"status": "已处理"}))["data"]
+
+        assert processing["status"] == "处理中"
+        assert resolved["status"] == "已处理"
+        assert repeat["status"] == "已处理"
+    finally:
+        with get_connection(DATABASE_PATH) as connection:
+            connection.execute("DELETE FROM fault_logs WHERE fault_id = ?", (fault_id,))
+            connection.commit()
+
+
+def test_fault_status_update_rejects_invalid_transition_and_status() -> None:
+    fault_id = "TEST_STATUS_INVALID"
+    with get_connection(DATABASE_PATH) as connection:
+        connection.execute(
+            """
+            INSERT OR REPLACE INTO fault_logs (
+              fault_id, source_dataset, scenario_id, station_id, detected_at,
+              fault_type_raw, fault_type_cn, fault_level, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (fault_id, "unit", "unit", "UNIT_BS", "2026-06-16T10:00:00", "unit", "信道干扰", "一般", "未处理"),
+        )
+        connection.commit()
+
+    try:
+        invalid_transition = client.patch(f"/api/faults/{fault_id}/status", json={"status": "已处理"})
+        invalid_status = client.patch(f"/api/faults/{fault_id}/status", json={"status": "挂起"})
+        missing_fault = client.patch("/api/faults/not-exist/status", json={"status": "处理中"})
+
+        assert invalid_transition.status_code == 400
+        assert invalid_status.status_code == 400
+        assert missing_fault.status_code == 404
+    finally:
+        with get_connection(DATABASE_PATH) as connection:
+            connection.execute("DELETE FROM fault_logs WHERE fault_id = ?", (fault_id,))
+            connection.commit()
 
 
 def test_metrics_and_model_evaluation_api() -> None:
@@ -70,6 +140,186 @@ def test_model_inference_post_apis() -> None:
     assert classify["latency_ms"] >= 0
 
     assert simulation["processed_data_available"] is True
+    assert simulation["database_refreshed"] is True
+    assert simulation["mode"] == "reload_demo_dataset"
+    assert simulation["duration_ms"] >= 0
+    assert simulation["loaded_files"]["network_metrics"] >= 3000
+    assert simulation["after_counts"]["network_metrics"] >= 3000
+    assert simulation["fault_type_counts"]
+
+
+def test_area_simulation_generates_triangulated_faults(monkeypatch, tmp_path) -> None:
+    from backend.src.api.routes import simulation as simulation_route
+    from backend.src.data_ingestion.demo_loader import REPORTS_DIR, refresh_demo_database
+
+    db_path = tmp_path / "area.db"
+
+    def fake_refresh_demo_database(processed_dir, reports_dir=REPORTS_DIR):
+        return refresh_demo_database(db_path=db_path, processed_dir=processed_dir, reports_dir=reports_dir)
+
+    monkeypatch.setattr(simulation_route, "BACKEND_ROOT", tmp_path)
+    monkeypatch.setattr(simulation_route, "refresh_demo_database", fake_refresh_demo_database)
+
+    body = assert_success(
+        client.post(
+            "/api/simulation/generate-area"
+            "?min_lng=113.20&min_lat=23.05&max_lng=113.35&max_lat=23.18"
+            "&station_count=6&metric_count=80&fault_ratio=0.2&seed=7&refresh_db=true"
+        )
+    )["data"]
+
+    assert body["generated"] is True
+    assert body["mode"] == "generate_area_synthetic_dataset"
+    assert body["parameters"]["area_bounds"]["min_lng"] == 113.20
+    assert body["parameters"]["enable_triangulation"] is True
+    assert body["generated_files"]["triangulation_observations"] > 0
+    assert body["refresh"]["database_refreshed"] is True
+    assert body["refresh"]["after_counts"]["fault_logs"] > 0
+
+
+def test_classify_persist_flag_controls_repository_call(monkeypatch) -> None:
+    calls = []
+
+    class FakeRepository:
+        def inference_metrics(self, limit=20, metric_id=None, source_dataset="TelecomTS"):
+            return [
+                {
+                    "metric_id": "M_API_001",
+                    "source_dataset": "unit",
+                    "scenario_id": "api",
+                    "station_id": "BS_API",
+                }
+            ]
+
+        def persist_inference_results(self, records, predictions, mode):
+            calls.append({"records": records, "predictions": predictions, "mode": mode})
+            return {
+                "enabled": True,
+                "persisted_count": 1,
+                "skipped_count": 0,
+                "fault_ids": ["AI_M_API_001"],
+            }
+
+    def fake_classify(records):
+        return {
+            "model_available": True,
+            "sample_count": len(records),
+            "latency_ms": 0.0,
+            "labeled_accuracy": None,
+            "predicted_type_counts": {"信道干扰": 1},
+            "results": [
+                {
+                    "metric_id": "M_API_001",
+                    "predicted_fault_type": "信道干扰",
+                    "confidence": 0.9,
+                    "key_metrics": {"sinr": 4.0},
+                }
+            ],
+        }
+
+    monkeypatch.setattr(faults_route, "Repository", FakeRepository)
+    monkeypatch.setattr(faults_route, "run_fault_classification", fake_classify)
+
+    without_persist = assert_success(client.post("/api/faults/classify?limit=1"))["data"]
+    with_persist = assert_success(client.post("/api/faults/classify?limit=1&persist=true"))["data"]
+
+    assert "persistence" not in without_persist
+    assert with_persist["persistence"]["persisted_count"] == 1
+    assert calls == [
+        {
+            "records": [
+                {
+                    "metric_id": "M_API_001",
+                    "source_dataset": "unit",
+                    "scenario_id": "api",
+                    "station_id": "BS_API",
+                }
+            ],
+            "predictions": [
+                {
+                    "metric_id": "M_API_001",
+                    "predicted_fault_type": "信道干扰",
+                    "confidence": 0.9,
+                    "key_metrics": {"sinr": 4.0},
+                }
+            ],
+            "mode": "classification",
+        }
+    ]
+
+
+def test_detect_persist_flag_controls_repository_call(monkeypatch) -> None:
+    calls = []
+
+    class FakeRepository:
+        def inference_metrics(self, limit=20, metric_id=None, source_dataset="TelecomTS"):
+            return [
+                {
+                    "metric_id": "M_API_002",
+                    "source_dataset": "unit",
+                    "scenario_id": "api",
+                    "station_id": "BS_API",
+                }
+            ]
+
+        def persist_inference_results(self, records, predictions, mode):
+            calls.append({"records": records, "predictions": predictions, "mode": mode})
+            return {
+                "enabled": True,
+                "persisted_count": 1,
+                "skipped_count": 0,
+                "fault_ids": ["AI_M_API_002"],
+            }
+
+    def fake_detect(records):
+        return {
+            "model_available": True,
+            "sample_count": len(records),
+            "anomaly_count": 1,
+            "threshold": 0.1,
+            "latency_ms": 0.0,
+            "labeled_accuracy": None,
+            "results": [
+                {
+                    "metric_id": "M_API_002",
+                    "is_anomaly": True,
+                    "anomaly_score": 0.2,
+                    "threshold": 0.1,
+                    "key_metrics": {"sinr": 4.0},
+                }
+            ],
+        }
+
+    monkeypatch.setattr(faults_route, "Repository", FakeRepository)
+    monkeypatch.setattr(faults_route, "detect_anomalies", fake_detect)
+
+    without_persist = assert_success(client.post("/api/faults/detect?limit=1"))["data"]
+    with_persist = assert_success(client.post("/api/faults/detect?limit=1&persist=true"))["data"]
+
+    assert "persistence" not in without_persist
+    assert with_persist["persistence"]["persisted_count"] == 1
+    assert calls == [
+        {
+            "records": [
+                {
+                    "metric_id": "M_API_002",
+                    "source_dataset": "unit",
+                    "scenario_id": "api",
+                    "station_id": "BS_API",
+                }
+            ],
+            "predictions": [
+                {
+                    "metric_id": "M_API_002",
+                    "is_anomaly": True,
+                    "anomaly_score": 0.2,
+                    "threshold": 0.1,
+                    "key_metrics": {"sinr": 4.0},
+                }
+            ],
+            "mode": "detection",
+        }
+    ]
 
 
 def test_not_found_api_shape() -> None:

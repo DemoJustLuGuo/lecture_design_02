@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Query
 
 from backend.src.api.routes.common import not_found, success
 from backend.src.database.repository import Repository
@@ -11,9 +12,27 @@ from backend.src.models.inference import detect_anomalies
 router = APIRouter(tags=["faults"])
 
 
+class FaultStatusUpdateRequest(BaseModel):
+    status: str
+
+
 @router.get("/faults")
-def list_faults(fault_type: str | None = None, fault_level: str | None = None, limit: int = 200) -> dict:
-    return success(Repository().list_faults(fault_type=fault_type, fault_level=fault_level, limit=limit))
+def list_faults(
+    fault_type: str | None = None,
+    fault_level: str | None = None,
+    status: str | None = None,
+    source: str | None = None,
+    limit: int = 200,
+) -> dict:
+    return success(
+        Repository().list_faults(
+            fault_type=fault_type,
+            fault_level=fault_level,
+            status=status,
+            source=source,
+            limit=limit,
+        )
+    )
 
 
 @router.get("/faults/{fault_id}")
@@ -22,6 +41,17 @@ def get_fault(fault_id: str) -> dict:
     if fault is None:
         not_found("fault not found")
     return success(fault)
+
+
+@router.patch("/faults/{fault_id}/status")
+def update_fault_status(fault_id: str, payload: FaultStatusUpdateRequest) -> dict:
+    try:
+        fault = Repository().update_fault_status(fault_id=fault_id, status=payload.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail={"success": False, "data": None, "message": str(exc)}) from exc
+    if fault is None:
+        not_found("fault not found")
+    return success(fault, message="故障处理状态已更新。")
 
 
 def _load_inference_metrics(
@@ -44,10 +74,18 @@ def detect_faults(
     limit: int = Query(default=20, ge=1, le=200),
     metric_id: str | None = None,
     source_dataset: str | None = "TelecomTS",
+    persist: bool = False,
 ) -> dict:
     records = _load_inference_metrics(limit=limit, metric_id=metric_id, source_dataset=source_dataset)
+    result = detect_anomalies(records)
+    if persist:
+        result["persistence"] = Repository().persist_inference_results(
+            records=records,
+            predictions=result["results"],
+            mode="detection",
+        )
     return success(
-        detect_anomalies(records),
+        result,
         message="异常检测已完成。",
     )
 
@@ -57,9 +95,17 @@ def classify_faults(
     limit: int = Query(default=20, ge=1, le=200),
     metric_id: str | None = None,
     source_dataset: str | None = "TelecomTS",
+    persist: bool = False,
 ) -> dict:
     records = _load_inference_metrics(limit=limit, metric_id=metric_id, source_dataset=source_dataset)
+    result = run_fault_classification(records)
+    if persist:
+        result["persistence"] = Repository().persist_inference_results(
+            records=records,
+            predictions=result["results"],
+            mode="classification",
+        )
     return success(
-        run_fault_classification(records),
+        result,
         message="故障分类已完成。",
     )

@@ -22,6 +22,8 @@ D:\CODE\lesson_design_02\AGENTS.md
 D:\CODE\lesson_design_02\main\lecture_design_02\docs\development_spec.md
 ```
 
+若需要了解项目当前工作进度、阶段性验收记录、系统结构说明、补充设计信息或后续 TODO，应优先读取源码工程内的 `docs/` 目录。该目录用于保存阶段文档、运行说明、系统功能结构和联调记录，是继续开发前判断项目状态的重要依据。
+
 ## 当前实现目标
 
 实现题目5：基于AI的智能通信故障检测与诊断系统。

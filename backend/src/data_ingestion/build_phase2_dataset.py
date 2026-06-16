@@ -743,6 +743,9 @@ def write_manifest(output_dir: Path, stats: dict[str, Any]) -> None:
 
 def build_dataset(datasets_root: Path, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    stale_triangulation_path = output_dir / "triangulation_observations.csv"
+    if stale_triangulation_path.exists():
+        stale_triangulation_path.unlink()
     paths = {
         "network_metrics": output_dir / "network_metrics.csv",
         "fault_samples": output_dir / "fault_samples.csv",

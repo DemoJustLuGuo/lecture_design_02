@@ -16,7 +16,7 @@
     }
   },
   "total_metric_rows": 263994,
-  "generated_at": "2026-06-15T19:53:56",
+  "generated_at": "2026-06-16T19:56:48",
   "outputs": {
     "network_metrics": "network_metrics.csv",
     "fault_samples": "fault_samples.csv",
