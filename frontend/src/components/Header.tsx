@@ -1,8 +1,33 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+
+const mobileMenuItems = [
+  { path: '/', label: '监控总览', icon: 'dashboard' },
+  { path: '/stations', label: '基站管理', icon: 'router' },
+  { path: '/faults', label: '故障日志', icon: 'history_toggle_off' },
+  { path: '/map', label: '故障地图', icon: 'map' },
+  { path: '/metrics', label: '模型评估', icon: 'analytics' },
+  { path: '/mobile-alert', label: '移动预警', icon: 'notifications_active' },
+]
 
 export default function Header() {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const query = searchQuery.trim()
+    if (!query) return
+    navigate(`/faults?search=${encodeURIComponent(query)}`)
+    setMessage(null)
+  }
+
+  const showMessage = (text: string) => {
+    setMessage(text)
+    window.setTimeout(() => setMessage(null), 2400)
+  }
 
   return (
     <header className="fixed left-0 right-0 top-0 z-30 flex h-header-height items-center justify-between border-b border-outline-variant bg-surface px-6 md:left-sidebar-width">
@@ -14,7 +39,7 @@ export default function Header() {
         </span>
 
         {/* Search bar – hidden on mobile, visible from sm */}
-        <div className="relative hidden w-96 sm:block">
+        <form className="relative hidden w-96 sm:block" onSubmit={submitSearch}>
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">
             search
           </span>
@@ -25,8 +50,14 @@ export default function Header() {
             placeholder="搜索节点、IP或告警..."
             className="h-10 w-full rounded-md border border-outline-variant bg-surface-container-lowest pl-9 pr-4 font-data-mono text-on-surface-variant outline-none transition-all placeholder:text-on-surface-variant/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
-        </div>
+        </form>
       </div>
+
+      {message ? (
+        <div className="absolute left-1/2 top-full mt-2 -translate-x-1/2 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-body-sm font-body-sm text-on-surface shadow-lg">
+          {message}
+        </div>
+      ) : null}
 
       {/* ── Right side ────────────────────────────────── */}
       <div className="flex items-center gap-4 text-on-surface-variant">
@@ -35,6 +66,7 @@ export default function Header() {
           type="button"
           aria-label="通知"
           className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container"
+          onClick={() => navigate('/mobile-alert')}
         >
           <span className="material-symbols-outlined text-[20px]">notifications</span>
           <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-error animate-pulse-scale border border-surface" />
@@ -45,6 +77,7 @@ export default function Header() {
           type="button"
           aria-label="设置"
           className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container"
+          onClick={() => showMessage('当前演示版暂无独立设置页。')}
         >
           <span className="material-symbols-outlined text-[20px]">settings</span>
         </button>
@@ -54,6 +87,7 @@ export default function Header() {
           type="button"
           aria-label="帮助"
           className="hidden h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container sm:flex"
+          onClick={() => showMessage('帮助：按总览 -> 故障日志 -> 地图 -> 诊断建议顺序演示主流程。')}
         >
           <span className="material-symbols-outlined text-[20px]">help</span>
         </button>
@@ -78,6 +112,28 @@ export default function Header() {
           {mobileMenuOpen ? 'close' : 'menu'}
         </span>
       </button>
+
+      {mobileMenuOpen ? (
+        <nav className="absolute left-3 right-3 top-[calc(var(--spacing-header-height)+8px)] z-40 rounded-xl border border-outline-variant bg-surface p-2 shadow-lg md:hidden">
+          {mobileMenuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                [
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-body-sm font-body-sm',
+                  isActive ? 'bg-primary-container text-on-primary-container' : 'text-on-surface hover:bg-surface-container-low',
+                ].join(' ')
+              }
+            >
+              <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      ) : null}
     </header>
   )
 }

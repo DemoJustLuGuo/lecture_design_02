@@ -7,6 +7,7 @@ import { StationStatus } from '@/types/enums'
 /* ── Helpers ─────────────────────────────────────────────────── */
 
 type StatusFilterValue = 'all' | 'normal' | 'warning' | 'severe' | 'offline'
+const PAGE_SIZE = 20
 
 function getStationStatusBadge(status: string | null): {
   bg: string
@@ -69,6 +70,7 @@ export default function StationMgmt() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all')
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     fetchStations(200)
@@ -94,6 +96,20 @@ export default function StationMgmt() {
       return true
     })
   }, [stations, statusFilter, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredStations.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pageStart = filteredStations.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const pageEnd = Math.min(currentPage * PAGE_SIZE, filteredStations.length)
+  const pagedStations = filteredStations.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery, statusFilter])
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
 
   /* ── Loading / Error states ────────────────────────────── */
   if (loading && stations.length === 0) {
@@ -153,13 +169,14 @@ export default function StationMgmt() {
             <option value="offline">Offline (离线)</option>
           </select>
 
-          {/* New Station button */}
           <button
-            className="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-caps text-label-caps hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2"
+            className="bg-surface-container-low text-on-surface-variant border border-outline-variant px-4 py-2 rounded-lg font-label-caps text-label-caps shadow-sm flex items-center gap-2 cursor-not-allowed"
             type="button"
+            disabled
+            title="基站由模拟生成或外部导入产生，当前不支持手工新建。"
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            NEW STATION
+            <span className="material-symbols-outlined text-[18px]">lock</span>
+            外部导入
           </button>
         </div>
       </div>
@@ -180,7 +197,7 @@ export default function StationMgmt() {
               </tr>
             </thead>
             <tbody className="text-body-sm font-body-sm divide-y divide-outline-variant/50">
-              {filteredStations.map((station) => {
+              {pagedStations.map((station) => {
                 const badge = getStationStatusBadge(station.status)
                 const rowClass = getRowClass(station.status)
 
@@ -202,13 +219,28 @@ export default function StationMgmt() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-secondary hover:text-primary transition-colors p-1" type="button">
-                        <span className="material-symbols-outlined text-[20px]">more_vert</span>
+                      <button
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-1.5 text-primary transition-colors hover:bg-primary-container"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          navigate(`/stations/${station.station_id}`)
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">visibility</span>
+                        查看
                       </button>
                     </td>
                   </tr>
                 )
               })}
+              {pagedStations.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-body-sm font-body-sm text-on-surface-variant">
+                    当前筛选条件下没有基站记录。
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -216,46 +248,27 @@ export default function StationMgmt() {
         {/* Pagination */}
         <div className="border-t border-outline-variant bg-surface px-6 py-4 flex items-center justify-between">
           <p className="text-body-sm font-body-sm text-on-surface-variant">
-            Showing <span className="font-semibold text-on-surface">1</span> to{' '}
-            <span className="font-semibold text-on-surface">{Math.min(filteredStations.length, 10)}</span> of{' '}
+            Showing <span className="font-semibold text-on-surface">{pageStart}</span> to{' '}
+            <span className="font-semibold text-on-surface">{pageEnd}</span> of{' '}
             <span className="font-semibold text-on-surface">{filteredStations.length}</span> entries
           </p>
           <div className="flex items-center space-x-2">
             <button
               className="px-3 py-1 border border-outline-variant rounded bg-surface-container-lowest text-on-surface-variant hover:bg-surface-variant transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               type="button"
-              disabled
+              disabled={currentPage <= 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
             >
               <span className="material-symbols-outlined text-[18px] align-middle">chevron_left</span>
             </button>
-            <button
-              className="px-3 py-1 border border-primary bg-primary text-on-primary rounded font-data-mono text-data-mono"
-              type="button"
-            >
-              1
-            </button>
-            <button
-              className="px-3 py-1 border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-variant rounded transition-colors font-data-mono text-data-mono"
-              type="button"
-            >
-              2
-            </button>
-            <button
-              className="px-3 py-1 border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-variant rounded transition-colors font-data-mono text-data-mono"
-              type="button"
-            >
-              3
-            </button>
-            <span className="px-2 text-on-surface-variant">...</span>
-            <button
-              className="px-3 py-1 border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-variant rounded transition-colors font-data-mono text-data-mono"
-              type="button"
-            >
-              102
-            </button>
+            <span className="min-w-20 text-center font-data-mono text-data-mono text-on-surface-variant">
+              {currentPage} / {totalPages}
+            </span>
             <button
               className="px-3 py-1 border border-outline-variant rounded bg-surface-container-lowest text-on-surface-variant hover:bg-surface-variant transition-colors"
               type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
             >
               <span className="material-symbols-outlined text-[18px] align-middle">chevron_right</span>
             </button>

@@ -140,6 +140,29 @@ export default function ModelEval() {
 
   useECharts(barChartRef, barOptionFactory)
 
+  const handleExportReport = useCallback(() => {
+    const rows = [
+      ['模型名称', evalData?.model_name ?? '--'],
+      ['数据集版本', evalData?.dataset_version ?? '--'],
+      ['Accuracy', `${accuracy.toFixed(2)}%`],
+      ['Precision', `${precision.toFixed(2)}%`],
+      ['Recall', `${recall.toFixed(2)}%`],
+      ['F1', `${f1.toFixed(2)}%`],
+      ['平均定位误差(m)', localizationError.toFixed(2)],
+      ['评估时间', evalData?.created_at ?? '--'],
+    ]
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n')
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `model_evaluation_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }, [accuracy, evalData, f1, localizationError, precision, recall])
+
   if (loading) {
     return (
       <div className="max-w-[1440px] mx-auto space-y-gutter animate-fade-in">
@@ -170,7 +193,11 @@ export default function ModelEval() {
           <h3 className="font-headline-md text-headline-md text-on-surface">整体性能指标 (Overall Performance)</h3>
           <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">基准测试集评估结果 - Target: &gt;95%</p>
         </div>
-        <button className="bg-surface border border-outline-variant text-on-surface px-4 py-2 rounded font-label-caps text-label-caps hover:bg-surface-container-low transition-colors flex items-center gap-2">
+        <button
+          className="bg-surface border border-outline-variant text-on-surface px-4 py-2 rounded font-label-caps text-label-caps hover:bg-surface-container-low transition-colors flex items-center gap-2"
+          type="button"
+          onClick={handleExportReport}
+        >
           <span className="material-symbols-outlined text-[16px]">download</span>
           导出报告
         </button>

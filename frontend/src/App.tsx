@@ -1,21 +1,33 @@
 import { Outlet } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import MobileNav from './components/MobileNav'
 
 export default function App() {
+  const { pathname } = useLocation()
+  const isMapCanvas = pathname === '/map'
+
   return (
-    <div className="flex min-h-screen bg-surface text-on-surface">
+    <div className="flex h-screen overflow-hidden bg-surface text-on-surface">
       {/* ── Fixed sidebar (desktop only) ──────────────── */}
       <Sidebar />
 
       {/* ── Main content wrapper ──────────────────────── */}
-      <div className="flex-1 md:ml-sidebar-width flex flex-col min-h-screen">
+      <div className="flex h-screen min-h-0 flex-1 flex-col md:ml-sidebar-width">
         {/* ── Fixed header ───────────────────────────── */}
         <Header />
 
         {/* ── Main canvas ────────────────────────────── */}
-        <main className="flex-1 mt-header-height p-gutter overflow-y-auto pb-16 md:pb-0">
+        <main
+          className={[
+            'mt-header-height min-h-0',
+            isMapCanvas
+              ? 'overflow-hidden p-0'
+              : 'overflow-y-auto p-gutter pb-16 md:pb-0',
+          ].join(' ')}
+          style={{ height: 'calc(100vh - var(--spacing-header-height))' }}
+        >
           <Outlet />
         </main>
       </div>

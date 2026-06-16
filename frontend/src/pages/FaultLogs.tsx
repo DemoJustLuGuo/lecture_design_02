@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { StatusBadge } from '@/components/StatusBadge'
-import { fetchFaults } from '@/api/faults'
-import type { FaultLog } from '@/types/api'
+import { classifyFaults, fetchFaults, updateFaultStatus } from '@/api/faults'
+import type { FaultLog, FaultProcessStatus } from '@/types/api'
 import { FaultLevel } from '@/types/enums'
 
 /* ── Helpers ─────────────────────────────────────────────────── */
@@ -30,9 +30,24 @@ function severityBadgeStatus(level: string | null): 'critical' | 'warning' | 'in
 function statusBadgeStatus(status: string | null): 'critical' | 'warning' | 'info' | 'normal' | 'offline' {
   if (status === 'open' || status === 'Open') return 'critical'
   if (status === 'investigating' || status === 'Investigating') return 'warning'
-  if (status === 'resolved' || status === 'Resolved') return 'info'
-  if (status === 'closed' || status === 'Closed') return 'normal'
+  if (status === '处理中') return 'info'
+  if (status === '已处理' || status === 'resolved' || status === 'Resolved') return 'normal'
+  if (status === '关闭' || status === 'closed' || status === 'Closed') return 'offline'
+  if (status === '未处理') return 'warning'
   return 'info'
+}
+
+function nextStatusActions(status: string | null): Array<{ status: FaultProcessStatus; label: string; icon: string }> {
+  if (!status || status === '未处理') {
+    return [{ status: '处理中', label: '开始处理', icon: 'play_circle' }]
+  }
+  if (status === '处理中') {
+    return [
+      { status: '已处理', label: '已处理', icon: 'task_alt' },
+      { status: '关闭', label: '关闭', icon: 'cancel' },
+    ]
+  }
+  return []
 }
 
 function faultTypeIcon(type: string | null): string {
@@ -49,68 +64,117 @@ function faultTypeIcon(type: string | null): string {
   return 'help'
 }
 
+function isAiFault(fault: FaultLog): boolean {
+  return fault.fault_id.startsWith('AI_')
+}
+
+function escapeCsvCell(value: unknown): string {
+  const text = value == null ? '' : String(value)
+  return `"${text.replace(/"/g, '""')}"`
+}
+
+function buildFaultCsv(faults: FaultLog[]): string {
+  const headers = ['故障编号', '来源', '检测时间', '基站编号', '故障类型', '严重程度', '置信度', '处理状态']
+  const rows = faults.map((fault) => [
+    fault.fault_id,
+    isAiFault(fault) ? 'AI识别' : '历史样本',
+    fault.detected_at ?? '',
+    fault.station_id ?? '',
+    fault.fault_type_cn ?? '',
+    fault.fault_level ?? '',
+    fault.confidence == null ? '' : `${Math.round(fault.confidence * 100)}%`,
+    fault.status ?? '',
+  ])
+  return [headers, ...rows].map((row) => row.map(escapeCsvCell).join(',')).join('\r\n')
+}
+
 /* ── Filter State ────────────────────────────────────────────── */
 
-type FaultTypeFilter = 'all' | 'hardware' | 'software' | 'network' | 'power' | 'env'
+type FaultTypeFilter = 'all' | '信道干扰' | '基站故障' | '带宽不足' | '误码过高' | '信号中断/覆盖退化' | '未分类异常'
 type SeverityFilter = 'all' | 'critical' | 'warning' | 'info'
-type StatusFilter = 'all' | 'active' | 'resolved'
+type StatusFilter = 'all' | '未处理' | '处理中' | '已处理' | '关闭'
+type SourceFilter = 'all' | 'ai' | 'history'
+
+type ActionMessage = {
+  tone: 'success' | 'error'
+  text: string
+}
+
+const PAGE_SIZE = 20
 
 /* ── Fault Logs Page ─────────────────────────────────────────── */
 
 export default function FaultLogs() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [faults, setFaults] = useState<FaultLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [classifying, setClassifying] = useState(false)
+  const [updatingFaultId, setUpdatingFaultId] = useState<string | null>(null)
+  const [actionMessage, setActionMessage] = useState<ActionMessage | null>(null)
 
   const [typeFilter, setTypeFilter] = useState<FaultTypeFilter>('all')
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') ?? '')
+  const [page, setPage] = useState(1)
+
+  const loadFaults = useCallback(async () => {
+    const data = await fetchFaults(200, 0, {
+      fault_type: typeFilter === 'all' ? undefined : typeFilter,
+      fault_level: severityFilter === 'all'
+        ? undefined
+        : severityFilter === 'critical'
+          ? '严重'
+          : severityFilter === 'warning'
+            ? '预警'
+            : '一般',
+      status: statusFilter === 'all' ? undefined : statusFilter,
+      source: sourceFilter === 'all' ? undefined : sourceFilter,
+    })
+    setFaults(data)
+  }, [severityFilter, sourceFilter, statusFilter, typeFilter])
 
   useEffect(() => {
-    fetchFaults(200)
-      .then((data) => setFaults(data))
+    loadFaults()
       .catch((err) => setError(err.message || '数据加载失败'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [loadFaults])
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get('search') ?? '')
+  }, [searchParams])
+
+  const handleRunAiClassification = useCallback(async () => {
+    setClassifying(true)
+    setActionMessage(null)
+    setError(null)
+    try {
+      const result = await classifyFaults({ limit: 20, persist: true })
+      await loadFaults()
+      const persistence = result.persistence
+      const persisted = persistence?.persisted_count ?? 0
+      const skipped = persistence?.skipped_count ?? 0
+      const sampleCount = result.sample_count ?? 0
+      setActionMessage({
+        tone: 'success',
+        text: `AI 分类完成：处理 ${sampleCount} 条样本，写入/更新 ${persisted} 条故障日志，跳过 ${skipped} 条正常或重复记录。`,
+      })
+    } catch (err) {
+      setActionMessage({
+        tone: 'error',
+        text: err instanceof Error ? err.message : 'AI 分类入库失败',
+      })
+    } finally {
+      setClassifying(false)
+    }
+  }, [loadFaults])
 
   /* ── Client-side filtering ────────────────────────────── */
   const filteredFaults = useMemo(() => {
     return faults.filter((fault) => {
-      // Type filter
-      if (typeFilter !== 'all') {
-        const typeMap: Record<string, string[]> = {
-          hardware: ['硬件故障', 'Hardware', '基站故障', 'Station Fault', 'station_fault'],
-          software: ['软件异常', 'Software'],
-          network: ['网络中断', 'Network', '信号中断', 'Signal Interrupt', 'signal_interrupt', '信道干扰', 'Channel Interference', 'channel_interference'],
-          power: ['电源告警', 'Power'],
-          env: ['环境异常', 'Environment'],
-        }
-        const keywords = typeMap[typeFilter] ?? []
-        const match = keywords.some((kw) =>
-          (fault.fault_type_cn?.includes(kw)) || (fault.fault_type_raw?.includes(kw))
-        )
-        if (!match) return false
-      }
-
-      // Severity filter
-      if (severityFilter !== 'all') {
-        const levelMap: Record<string, string[]> = {
-          critical: [FaultLevel.Critical, '严重'],
-          warning: [FaultLevel.Warning, '预警', '警告'],
-          info: [FaultLevel.Info, '一般', '提示'],
-        }
-        const levels = levelMap[severityFilter] ?? []
-        if (!levels.includes(fault.fault_level ?? '')) return false
-      }
-
-      // Status filter
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'active' && (fault.status === 'resolved' || fault.status === 'closed')) return false
-        if (statusFilter === 'resolved' && fault.status !== 'resolved') return false
-      }
-
       // Search filter
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase()
@@ -122,7 +186,63 @@ export default function FaultLogs() {
 
       return true
     })
-  }, [faults, typeFilter, severityFilter, statusFilter, searchQuery])
+  }, [faults, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredFaults.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pageStart = filteredFaults.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const pageEnd = Math.min(currentPage * PAGE_SIZE, filteredFaults.length)
+  const pagedFaults = filteredFaults.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery, typeFilter, severityFilter, statusFilter, sourceFilter])
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
+
+  const handleExportCsv = useCallback(() => {
+    if (filteredFaults.length === 0) {
+      setActionMessage({ tone: 'error', text: '当前筛选条件下没有可导出的故障记录。' })
+      return
+    }
+    const blob = new Blob([`\ufeff${buildFaultCsv(filteredFaults)}`], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `fault_logs_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    setActionMessage({ tone: 'success', text: `已导出 ${filteredFaults.length} 条当前筛选结果。` })
+  }, [filteredFaults])
+
+  const handleUpdateStatus = useCallback(async (
+    event: React.MouseEvent<HTMLButtonElement>,
+    fault: FaultLog,
+    status: FaultProcessStatus,
+  ) => {
+    event.stopPropagation()
+    setUpdatingFaultId(fault.fault_id)
+    setActionMessage(null)
+    try {
+      const updated = await updateFaultStatus(fault.fault_id, status)
+      await loadFaults()
+      setActionMessage({
+        tone: 'success',
+        text: `故障 ${updated.fault_id} 状态已更新为 ${updated.status || status}。`,
+      })
+    } catch (err) {
+      setActionMessage({
+        tone: 'error',
+        text: err instanceof Error ? err.message : '故障状态更新失败',
+      })
+    } finally {
+      setUpdatingFaultId(null)
+    }
+  }, [loadFaults])
 
   /* ── Loading / Error states ────────────────────────────── */
   if (loading && faults.length === 0) {
@@ -160,23 +280,44 @@ export default function FaultLogs() {
           <button
             className="flex items-center gap-2 px-4 py-2 bg-surface border border-outline-variant rounded-lg text-body-sm font-body-sm text-on-surface hover:bg-surface-container-low transition-colors shadow-sm"
             type="button"
+            onClick={handleExportCsv}
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
             导出 CSV
           </button>
           <button
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-body-sm font-body-sm hover:bg-primary/90 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-body-sm font-body-sm hover:bg-primary/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
             type="button"
+            onClick={handleRunAiClassification}
+            disabled={classifying}
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            新建记录
+            <span className={`material-symbols-outlined text-[18px] ${classifying ? 'animate-spin-slow' : ''}`}>
+              {classifying ? 'progress_activity' : 'psychology'}
+            </span>
+            {classifying ? 'AI 分类中' : '执行 AI 分类'}
           </button>
         </div>
       </div>
 
+      {actionMessage ? (
+        <div
+          className={[
+            'border rounded-lg px-4 py-3 text-body-sm font-body-sm flex items-start gap-2',
+            actionMessage.tone === 'success'
+              ? 'bg-tertiary-container border-tertiary/30 text-on-tertiary-container'
+              : 'bg-error-container border-error/30 text-on-error-container',
+          ].join(' ')}
+        >
+          <span className="material-symbols-outlined text-[18px]">
+            {actionMessage.tone === 'success' ? 'check_circle' : 'error'}
+          </span>
+          <span>{actionMessage.text}</span>
+        </div>
+      ) : null}
+
       {/* ── Filter Bar ───────────────────────────────────────── */}
       <div className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Fault type dropdown */}
           <div className="flex flex-col gap-1.5">
             <label className="font-label-caps text-label-caps text-secondary uppercase">故障类型</label>
@@ -186,11 +327,12 @@ export default function FaultLogs() {
               className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
             >
               <option value="all">所有类型 (All)</option>
-              <option value="hardware">硬件故障 (Hardware)</option>
-              <option value="software">软件异常 (Software)</option>
-              <option value="network">网络中断 (Network)</option>
-              <option value="power">电源告警 (Power)</option>
-              <option value="env">环境异常 (Environment)</option>
+              <option value="信道干扰">信道干扰</option>
+              <option value="基站故障">基站故障</option>
+              <option value="带宽不足">带宽不足</option>
+              <option value="误码过高">误码过高</option>
+              <option value="信号中断/覆盖退化">信号中断/覆盖退化</option>
+              <option value="未分类异常">未分类异常</option>
             </select>
           </div>
 
@@ -203,9 +345,9 @@ export default function FaultLogs() {
               className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
             >
               <option value="all">所有级别 (All)</option>
-              <option value="critical">严重 (Critical)</option>
-              <option value="warning">警告 (Warning)</option>
-              <option value="info">提示 (Info)</option>
+              <option value="critical">严重</option>
+              <option value="warning">预警</option>
+              <option value="info">一般</option>
             </select>
           </div>
 
@@ -218,8 +360,24 @@ export default function FaultLogs() {
               className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
             >
               <option value="all">所有状态 (All)</option>
-              <option value="active">待处理 (Active)</option>
-              <option value="resolved">已解决 (Resolved)</option>
+              <option value="未处理">未处理</option>
+              <option value="处理中">处理中</option>
+              <option value="已处理">已处理</option>
+              <option value="关闭">关闭</option>
+            </select>
+          </div>
+
+          {/* Source dropdown */}
+          <div className="flex flex-col gap-1.5">
+            <label className="font-label-caps text-label-caps text-secondary uppercase">记录来源</label>
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}
+              className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            >
+              <option value="all">全部来源</option>
+              <option value="ai">AI识别</option>
+              <option value="history">历史样本</option>
             </select>
           </div>
 
@@ -243,10 +401,11 @@ export default function FaultLogs() {
       {/* ── Data Table ───────────────────────────────────────── */}
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
+          <table className="w-full text-left border-collapse min-w-[1050px]">
             <thead>
               <tr className="border-b border-outline-variant bg-surface-container-low">
                 <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider w-24">故障编号</th>
+                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">来源</th>
                 <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">
                   <div className="flex items-center gap-1">
                     检测时间
@@ -267,13 +426,28 @@ export default function FaultLogs() {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
-              {filteredFaults.map((fault) => (
+              {pagedFaults.map((fault) => (
                 <tr
                   key={fault.fault_id}
                   className="hover:bg-surface-container-lowest transition-colors group cursor-pointer"
                   onClick={() => navigate(`/faults/${fault.fault_id}/diagnosis`)}
                 >
                   <td className="py-3 px-4 font-data-mono text-data-mono text-on-surface">{fault.fault_id}</td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={[
+                        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold',
+                        isAiFault(fault)
+                          ? 'bg-primary/15 text-primary border border-primary/30'
+                          : 'bg-surface-container text-on-surface-variant border border-outline-variant',
+                      ].join(' ')}
+                    >
+                      <span className="material-symbols-outlined text-[14px]">
+                        {isAiFault(fault) ? 'psychology' : 'history'}
+                      </span>
+                      {isAiFault(fault) ? 'AI识别' : '历史样本'}
+                    </span>
+                  </td>
                   <td className="py-3 px-4 font-data-mono text-data-mono text-on-surface-variant">{formatTime(fault.detected_at)}</td>
                   <td className="py-3 px-4 font-data-mono text-data-mono text-on-surface">{fault.station_id || '--'}</td>
                   <td className="py-3 px-4">
@@ -299,15 +473,46 @@ export default function FaultLogs() {
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <StatusBadge status={statusBadgeStatus(fault.status)} size="sm" />
+                    <StatusBadge status={statusBadgeStatus(fault.status)} label={fault.status || '未处理'} size="sm" />
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <button className="p-1 text-outline hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" type="button">
-                      <span className="material-symbols-outlined text-[20px]">more_vert</span>
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      {nextStatusActions(fault.status).map((action) => (
+                        <button
+                          key={action.status}
+                          className="inline-flex items-center gap-1 rounded border border-outline-variant bg-surface px-2 py-1 text-[11px] font-semibold text-on-surface transition-colors hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                          type="button"
+                          onClick={(event) => handleUpdateStatus(event, fault, action.status)}
+                          disabled={updatingFaultId === fault.fault_id}
+                        >
+                          <span className={`material-symbols-outlined text-[14px] ${updatingFaultId === fault.fault_id ? 'animate-spin-slow' : ''}`}>
+                            {updatingFaultId === fault.fault_id ? 'progress_activity' : action.icon}
+                          </span>
+                          {action.label}
+                        </button>
+                      ))}
+                      <button
+                        className="p-1 text-outline hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          navigate(`/faults/${fault.fault_id}/diagnosis`)
+                        }}
+                        aria-label="查看诊断"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">troubleshoot</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
+              {pagedFaults.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center font-body-sm text-body-sm text-on-surface-variant">
+                    当前筛选条件下没有故障记录。
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -315,38 +520,25 @@ export default function FaultLogs() {
         {/* Pagination footer */}
         <div className="border-t border-outline-variant bg-surface px-4 py-3 flex items-center justify-between">
           <span className="font-body-sm text-body-sm text-on-surface-variant">
-            Showing {filteredFaults.length > 0 ? 1 : 0} to {Math.min(filteredFaults.length, 10)} of {filteredFaults.length} entries
+            Showing {pageStart} to {pageEnd} of {filteredFaults.length} entries
           </span>
           <div className="flex items-center gap-2">
             <button
               className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-outline hover:bg-surface-container-low transition-colors disabled:opacity-50"
               type="button"
-              disabled
+              disabled={currentPage <= 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
             >
               <span className="material-symbols-outlined text-[18px]">chevron_left</span>
             </button>
-            <button
-              className="w-8 h-8 flex items-center justify-center rounded bg-primary text-on-primary text-body-sm font-medium"
-              type="button"
-            >
-              1
-            </button>
-            <button
-              className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors text-body-sm font-medium"
-              type="button"
-            >
-              2
-            </button>
-            <button
-              className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors text-body-sm font-medium"
-              type="button"
-            >
-              3
-            </button>
-            <span className="text-outline">...</span>
+            <span className="min-w-20 text-center font-data-mono text-data-mono text-on-surface-variant">
+              {currentPage} / {totalPages}
+            </span>
             <button
               className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-outline hover:bg-surface-container-low transition-colors"
               type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
             >
               <span className="material-symbols-outlined text-[18px]">chevron_right</span>
             </button>

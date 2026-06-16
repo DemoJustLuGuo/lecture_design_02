@@ -66,24 +66,27 @@ export default function Sidebar() {
 
       {/* ── Footer ─────────────────────────────────────── */}
       <div className="mt-auto border-t border-outline/30 px-2 pt-4">
-        <a
-          href="#support"
-          className="mx-2 my-1 flex items-center gap-3 rounded-lg px-4 py-3 text-[13px] font-medium tracking-wide text-surface-variant transition-colors hover:bg-surface-container-highest/10 hover:text-white"
+        <button
+          type="button"
+          className="mx-2 my-1 flex w-[calc(100%-1rem)] items-center gap-3 rounded-lg px-4 py-3 text-left text-[13px] font-medium tracking-wide text-surface-variant transition-colors hover:bg-surface-container-highest/10 hover:text-white"
+          title="演示顺序：总览、故障日志、地图、诊断建议、模型评估。"
         >
           <span className="material-symbols-outlined text-[20px] leading-none" style={{ fontVariationSettings: "'FILL' 0" }}>
             help
           </span>
           <span>帮助支持</span>
-        </a>
-        <a
-          href="#sign-out"
-          className="mx-2 my-1 flex items-center gap-3 rounded-lg px-4 py-3 text-[13px] font-medium tracking-wide text-surface-variant transition-colors hover:bg-surface-container-highest/10 hover:text-white"
+        </button>
+        <button
+          type="button"
+          className="mx-2 my-1 flex w-[calc(100%-1rem)] cursor-not-allowed items-center gap-3 rounded-lg px-4 py-3 text-left text-[13px] font-medium tracking-wide text-surface-variant opacity-70"
+          disabled
+          title="本课程设计演示版未接入登录会话。"
         >
           <span className="material-symbols-outlined text-[20px] leading-none" style={{ fontVariationSettings: "'FILL' 0" }}>
             logout
           </span>
           <span>退出系统</span>
-        </a>
+        </button>
       </div>
     </aside>
   )

@@ -34,7 +34,9 @@ client.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       const detail = error.response.data?.detail ?? error.response.data?.message ?? ''
-      const message = detail || `请求失败 (HTTP ${status})`
+      const message = typeof detail === 'string'
+        ? detail
+        : detail?.message || `请求失败 (HTTP ${status})`
       const apiError = new Error(message)
       apiError.name = 'ApiError'
       return Promise.reject(apiError)

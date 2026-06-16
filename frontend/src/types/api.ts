@@ -21,6 +21,20 @@ export interface FaultTypeCount {
   count: number
 }
 
+export interface FaultTrendItem {
+  date: string
+  label: string
+  total: number
+  severe: number
+}
+
+export interface FaultTrendResponse {
+  days: number
+  start_date: string
+  end_date: string
+  items: FaultTrendItem[]
+}
+
 /** ── Base Stations ──────────────────────────────────────── */
 export interface Station {
   station_id: string
@@ -39,6 +53,7 @@ export interface Station {
 
 export interface StationDetail extends Station {
   recent_metrics: MetricRecord[]
+  recent_faults: FaultLog[]
 }
 
 export interface MetricRecord {
@@ -99,6 +114,24 @@ export interface FaultDetail extends FaultLog {
 export interface FaultFilters {
   fault_type?: string
   fault_level?: string
+  status?: string
+  source?: 'ai' | 'history'
+}
+
+export type FaultProcessStatus = '未处理' | '处理中' | '已处理' | '关闭'
+
+export interface InferenceRequestOptions {
+  limit?: number
+  metric_id?: string
+  source_dataset?: string
+  persist?: boolean
+}
+
+export interface PersistenceResult {
+  enabled: boolean
+  persisted_count: number
+  skipped_count: number
+  fault_ids: string[]
 }
 
 export interface DetectResult {
@@ -113,6 +146,7 @@ export interface DetectResult {
   latency_ms: number
   labeled_accuracy: number | null
   results: DetectionPrediction[]
+  persistence?: PersistenceResult
 }
 
 export interface ClassifyResult {
@@ -126,6 +160,7 @@ export interface ClassifyResult {
   labeled_accuracy: number | null
   predicted_type_counts: Record<string, number>
   results: ClassificationPrediction[]
+  persistence?: PersistenceResult
 }
 
 export interface InferenceMetricIdentity {
@@ -152,6 +187,23 @@ export interface ClassificationPrediction extends InferenceMetricIdentity {
 }
 
 /** ── Diagnosis ──────────────────────────────────────────── */
+export interface DiagnosisAction {
+  title: string
+  description: string
+}
+
+export interface DiagnosisDisplay {
+  fault_type: string
+  source_label: string
+  root_cause: string
+  key_symptoms: string[]
+  suggested_actions: DiagnosisAction[]
+  affected_scope: string
+  evidence: string[]
+  review_required: boolean
+  review_reason: string
+}
+
 export interface DiagnosisRecord {
   diagnosis_id: string | null
   fault_id: string | null
@@ -161,6 +213,7 @@ export interface DiagnosisRecord {
   affected_scope: string | null
   review_required: number | null
   created_at: string | null
+  display?: DiagnosisDisplay
   fault: FaultDetail
 }
 
@@ -191,6 +244,79 @@ export interface ModelEvaluationResponse {
 /** ── Simulation ────────────────────────────────────────── */
 export interface SimulationResult {
   processed_data_available: boolean
+  database_refreshed: boolean
+  mode?: string
   processed_dir: string
+  database_path?: string
+  started_at?: string
+  finished_at?: string
+  duration_ms?: number
+  before_counts?: Record<string, number>
+  after_counts?: Record<string, number>
+  loaded_files?: Record<string, number>
+  fault_type_counts?: Record<string, number>
+  processed_fault_type_counts?: Record<string, number>
+  source_summary?: Record<string, unknown>
+  missing_files?: string[]
+  message: string
+}
+
+export interface SimulationGenerateOptions {
+  station_count?: number
+  metric_count?: number
+  fault_ratio?: number
+  seed?: number
+  refresh_db?: boolean
+}
+
+export interface SimulationAreaGenerateOptions extends SimulationGenerateOptions {
+  min_lng: number
+  min_lat: number
+  max_lng: number
+  max_lat: number
+  enable_triangulation?: boolean
+}
+
+export interface SimulationGenerateResult {
+  generated: boolean
+  mode: string
+  output_dir: string
+  output_scope?: 'processed' | 'preview'
+  preview_id?: string | null
+  parameters: {
+    station_count: number
+    metric_count: number
+    fault_ratio: number
+    seed: number
+    area_bounds?: {
+      min_lng: number
+      min_lat: number
+      max_lng: number
+      max_lat: number
+    } | null
+    enable_triangulation?: boolean
+  }
+  generated_files: Record<string, number>
+  fault_type_counts: Record<string, number>
+  refresh?: SimulationResult
+  message: string
+}
+
+export interface SimulationImportResult {
+  batch_id: string
+  source_name: string
+  status: string
+  started_at: string
+  finished_at: string
+  network_metrics_filename: string
+  base_stations_filename: string | null
+  tables: Record<string, {
+    inserted_count: number
+    skipped_count: number
+    error_count: number
+  }>
+  inserted_count: number
+  skipped_count: number
+  error_count: number
   message: string
 }

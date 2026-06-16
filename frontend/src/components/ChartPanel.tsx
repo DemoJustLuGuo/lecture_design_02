@@ -14,13 +14,12 @@ export function ChartPanel({ title, className = '', children }: ChartPanelProps)
       {/* ── Header ────────────────────────────────────── */}
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-headline-md text-on-surface">{title}</h2>
-        <button
-          type="button"
-          aria-label={`${title} 更多`}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container"
+        <span
+          aria-hidden="true"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
         >
           <span className="material-symbols-outlined text-[20px]">more_horiz</span>
-        </button>
+        </span>
       </div>
 
       {/* ── Chart area ────────────────────────────────── */}

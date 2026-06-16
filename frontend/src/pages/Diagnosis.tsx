@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { BreadcrumbNav } from '@/components/BreadcrumbNav'
 import { fetchDiagnosis } from '@/api/diagnosis'
-import type { DiagnosisRecord } from '@/types/api'
+import type { DiagnosisAction, DiagnosisDisplay, DiagnosisRecord } from '@/types/api'
 
 /* ── Sub-components ──────────────────────────────────────── */
 
@@ -19,6 +19,42 @@ function StepNumber({ n }: { n: number }) {
       {n}
     </div>
   )
+}
+
+function parseActionText(value: string | null): DiagnosisAction[] {
+  const lines = (value ?? '')
+    .split('\n')
+    .map((line) => line.replace(/^\d+[.、]\s*/, '').trim())
+    .filter(Boolean)
+
+  return lines.map((line) => {
+    const [title, ...rest] = line.split(/[：:]/)
+    return {
+      title: title.trim(),
+      description: rest.join('：').trim(),
+    }
+  })
+}
+
+function fallbackDisplay(data: DiagnosisRecord): DiagnosisDisplay {
+  const fault = data.fault
+  const actions = parseActionText(data.suggested_actions)
+
+  return {
+    fault_type: fault.fault_type_cn ?? data.fault_type_cn ?? '未知故障',
+    source_label: fault.fault_id.startsWith('AI_') ? 'AI在线诊断' : '历史样本诊断',
+    root_cause: data.root_cause ?? '系统已识别通信指标异常，需要结合关键KPI和现场告警继续确认根因。',
+    key_symptoms: ['关键通信指标偏离正常基线', '业务质量存在下降风险'],
+    suggested_actions: actions.length > 0
+      ? actions
+      : [{ title: '人工复核', description: '请复核RSRP、SINR、BER/BLER、PRB利用率和吞吐量后确认处理方案。' }],
+    affected_scope: data.affected_scope ?? '影响范围需要结合故障基站、定位结果和实时业务指标继续确认。',
+    evidence: fault.station_id ? [`关联基站：${fault.station_id}`] : [],
+    review_required: data.review_required === 1,
+    review_reason: data.review_required === 1
+      ? '系统诊断结果标记为需要运维人员复核。'
+      : '当前规则判断可按建议流程处理，处理后继续观察关键指标恢复情况。',
+  }
 }
 
 /* ── Main Page ───────────────────────────────────────────── */
@@ -61,27 +97,9 @@ export default function Diagnosis() {
   }
 
   const fault = data.fault
-  const confidence = fault.confidence ?? 94
-
-  /* Parse suggested_actions — assume it's a JSON string or plain text */
-  let actions: { title: string; description: string }[] = []
-  try {
-    const parsed = JSON.parse(data.suggested_actions ?? '[]')
-    if (Array.isArray(parsed)) {
-      actions = parsed
-    }
-  } catch {
-    /* If not JSON, split by newlines */
-    const lines = (data.suggested_actions ?? '').split('\n').filter(Boolean)
-    actions = lines.map((line) => ({ title: line, description: '' }))
-  }
-
-  /* Parse root_cause paragraphs */
-  const rootCauseParagraphs = (data.root_cause ?? '').split('\n').filter(Boolean)
-
-  /* Parse affected_scope */
-  const scopeText = data.affected_scope ?? ''
-  const reviewRequired = data.review_required === 1
+  const display = data.display ?? fallbackDisplay(data)
+  const confidence = fault.confidence == null ? null : (fault.confidence <= 1 ? fault.confidence * 100 : fault.confidence)
+  const reviewRequired = display.review_required
 
   return (
     <div className="max-w-[1200px] mx-auto flex flex-col gap-gutter animate-fade-in">
@@ -90,8 +108,8 @@ export default function Diagnosis() {
         <div className="flex flex-col">
           <BreadcrumbNav
             items={[
-              { label: 'Faults', path: '/faults' },
-              { label: 'Diagnosis Suggestion' },
+              { label: '故障日志', path: '/faults' },
+              { label: '诊断建议' },
             ]}
           />
           <h1 className="font-headline-md text-headline-md text-on-surface mt-1">诊断建议</h1>
@@ -128,11 +146,11 @@ export default function Diagnosis() {
           <div className="flex gap-2">
             <span className="px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-caps text-label-caps uppercase border border-error/20 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-error" />
-              Critical
+              {fault.fault_level ?? '未分级'}
             </span>
-            <span className="px-2.5 py-1 rounded-full bg-primary-container text-primary font-label-caps text-label-caps uppercase border border-primary/20 flex items-center gap-1">
+            <span className="px-2.5 py-1 rounded-full bg-primary-container text-primary font-label-caps text-label-caps border border-primary/20 flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px]">psychology</span>
-              AI Confidence: {confidence}%
+              {confidence == null ? display.source_label : `模型置信度 ${confidence.toFixed(1)}%`}
             </span>
           </div>
         </div>
@@ -140,20 +158,20 @@ export default function Diagnosis() {
         {/* 4-column info grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="flex flex-col gap-1">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Fault ID</span>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">故障编号</span>
             <span className="font-data-mono text-data-mono text-on-surface">{fault.fault_id}</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Detection Time</span>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">检测时间</span>
             <span className="font-data-mono text-data-mono text-on-surface">{fault.detected_at ?? '-'}</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Affected Station</span>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">关联基站</span>
             <span className="font-body-sm text-body-sm text-on-surface">{fault.station_id ?? '-'}</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Fault Type</span>
-            <span className="font-body-sm text-body-sm text-on-surface">{fault.fault_type_raw ?? '-'} / {fault.fault_type_cn ?? '-'}</span>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">故障类型</span>
+            <span className="font-body-sm text-body-sm text-on-surface">{display.fault_type}</span>
           </div>
         </div>
       </section>
@@ -169,26 +187,31 @@ export default function Diagnosis() {
             <h3 className="font-headline-md text-headline-md text-on-surface">原因分析</h3>
           </div>
           <div className="prose prose-sm max-w-none text-on-surface-variant font-body-md leading-relaxed space-y-4">
-            {rootCauseParagraphs.length > 0 ? (
-              rootCauseParagraphs.map((p, i) => (
-                <p key={i}>{p}</p>
-              ))
-            ) : (
-              <p>
-                AI引擎分析了系统日志与流量模式，检测到关键节点之间的协议会话频繁重置。
-                根本原因定位于物理链路层面的微小丢包导致Keepalive消息超时。
-              </p>
-            )}
+            <p>{display.root_cause}</p>
             <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/30 flex items-start gap-3 mt-4">
               <span className="material-symbols-outlined text-secondary text-[20px] mt-0.5">info</span>
               <div className="font-body-sm">
-                <span className="block font-medium text-on-surface mb-1">关键特征:</span>
+                <span className="block font-medium text-on-surface mb-1">关键症状</span>
                 <ul className="list-disc pl-4 space-y-1">
-                  <li>光功率波动与接口Error Counters激增时间高度重合。</li>
-                  <li>CPU利用率正常，排除控制平面过载。</li>
+                  {display.key_symptoms.map((symptom) => (
+                    <li key={symptom}>{symptom}</li>
+                  ))}
                 </ul>
               </div>
             </div>
+            {display.evidence.length > 0 && (
+              <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/30 flex items-start gap-3">
+                <span className="material-symbols-outlined text-secondary text-[20px] mt-0.5">fact_check</span>
+                <div className="font-body-sm">
+                  <span className="block font-medium text-on-surface mb-1">诊断依据</span>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {display.evidence.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -201,8 +224,8 @@ export default function Diagnosis() {
             <h3 className="font-headline-md text-headline-md text-on-surface">处理建议</h3>
           </div>
           <ol className="flex flex-col gap-3 font-body-md text-on-surface">
-            {actions.length > 0 ? (
-              actions.map((action, i) => (
+            {display.suggested_actions.length > 0 ? (
+              display.suggested_actions.map((action, i) => (
                 <li key={i} className="flex gap-3 bg-surface-container-low p-3 rounded-lg border border-outline-variant/20">
                   <StepNumber n={i + 1} />
                   <div>
@@ -212,29 +235,13 @@ export default function Diagnosis() {
                 </li>
               ))
             ) : (
-              <>
-                <li className="flex gap-3 bg-surface-container-low p-3 rounded-lg border border-outline-variant/20">
-                  <StepNumber n={1} />
-                  <div>
-                    <h4 className="font-medium text-on-surface mb-1">临时缓解 (立即)</h4>
-                    <p className="text-on-surface-variant font-body-sm">配置 Route Dampening，以减少路由震荡对全网路由表的冲击。</p>
-                  </div>
-                </li>
-                <li className="flex gap-3 bg-surface-container-low p-3 rounded-lg border border-outline-variant/20">
-                  <StepNumber n={2} />
-                  <div>
-                    <h4 className="font-medium text-on-surface mb-1">故障隔离 (立即)</h4>
-                    <p className="text-on-surface-variant font-body-sm">将经过故障链路的流量通过 IGP 流量工程平滑切换至备用链路。</p>
-                  </div>
-                </li>
-                <li className="flex gap-3 bg-surface-container-low p-3 rounded-lg border border-outline-variant/20">
-                  <StepNumber n={3} />
-                  <div>
-                    <h4 className="font-medium text-on-surface mb-1">物理层修复 (计划)</h4>
-                    <p className="text-on-surface-variant font-body-sm">安排现场工程师检查或更换相关光模块（SFP+）。</p>
-                  </div>
-                </li>
-              </>
+              <li className="flex gap-3 bg-surface-container-low p-3 rounded-lg border border-outline-variant/20">
+                <StepNumber n={1} />
+                <div>
+                  <h4 className="font-medium text-on-surface mb-1">人工复核</h4>
+                  <p className="text-on-surface-variant font-body-sm">请结合现场告警和关键KPI确认故障根因后处理。</p>
+                </div>
+              </li>
             )}
           </ol>
         </section>
@@ -248,22 +255,21 @@ export default function Diagnosis() {
             <h3 className="font-headline-md text-headline-md text-on-surface">影响范围</h3>
           </div>
           <p className="font-body-md text-on-surface-variant leading-relaxed">
-            {scopeText || (
-              <>
-                目前路由震荡已导致跨区域的延迟增加约 <span className="text-error font-medium">12ms</span>。
-                约有 <span className="text-on-surface font-medium">5%</span> 的北美东海岸出向流量可能经历偶发性重传。
-                核心控制平面稳定，未影响其他 BGP 邻居。
-              </>
-            )}
+            {display.affected_scope}
           </p>
         </div>
 
-        {/* Manual Review Badge */}
-        {reviewRequired && (
-          <div className="flex-shrink-0 bg-error-container/40 border border-error/30 rounded-xl p-4 flex flex-col items-center justify-center text-center w-full md:w-auto min-w-[200px] animate-border-flash">
+        {reviewRequired ? (
+          <div className="flex-shrink-0 bg-error-container/40 border border-error/30 rounded-xl p-4 flex flex-col items-center justify-center text-center w-full md:w-auto max-w-[280px] animate-border-flash">
             <span className="material-symbols-outlined text-error text-[32px] mb-2">engineering</span>
             <span className="font-headline-md text-headline-md text-error mb-1 tracking-tight">需人工复核</span>
-            <span className="font-body-sm text-on-error-container">建议在执行流量切换前确认</span>
+            <span className="font-body-sm text-on-error-container">{display.review_reason}</span>
+          </div>
+        ) : (
+          <div className="flex-shrink-0 bg-surface-container-low border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center text-center w-full md:w-auto max-w-[280px]">
+            <span className="material-symbols-outlined text-primary text-[32px] mb-2">task_alt</span>
+            <span className="font-headline-md text-headline-md text-primary mb-1 tracking-tight">自动诊断完成</span>
+            <span className="font-body-sm text-on-surface-variant">{display.review_reason}</span>
           </div>
         )}
       </section>

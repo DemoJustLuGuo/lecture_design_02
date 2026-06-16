@@ -80,6 +80,7 @@ export default function MobileAlert() {
   const [faults, setFaults] = useState<FaultLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -91,6 +92,15 @@ export default function MobileAlert() {
 
   const criticalCount = faults.filter((f) => mapSeverity(f.fault_level) === 'critical').length
   const criticalDisplay = useCountUp(criticalCount, 600)
+
+  const handleMarkAllRead = () => {
+    setFaults([])
+    setMessage('当前移动端告警已在本地标记为已读。')
+  }
+
+  const handleDispatch = (fault: FaultLog) => {
+    setMessage(`已为 ${fault.station_id ?? '未知基站'} 的 ${fault.fault_type_cn ?? '未知故障'} 生成演示派单。`)
+  }
 
   if (loading) {
     return (
@@ -143,7 +153,12 @@ export default function MobileAlert() {
             <span className="material-symbols-outlined text-on-surface">arrow_back</span>
           </button>
           <h1 className="font-headline-md text-headline-md text-on-surface">移动告警预警</h1>
-          <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors relative">
+          <button
+            type="button"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors relative"
+            onClick={() => navigate('/faults')}
+            title="查看完整故障日志"
+          >
             <span className="material-symbols-outlined text-on-surface">filter_list</span>
             {/* Red dot on filter */}
             {faults.length > 0 && (
@@ -175,12 +190,25 @@ export default function MobileAlert() {
             <p className="font-body-md text-on-surface-variant mt-1 text-center">系统检测到多处关键节点异常，需立即人工干预。</p>
           </section>
 
+          {message ? (
+            <div className="rounded-xl border border-tertiary/30 bg-tertiary-container px-4 py-3 text-body-sm font-body-sm text-on-tertiary-container">
+              {message}
+            </div>
+          ) : null}
+
           {/* ── Alert List Section ─────────────────────────── */}
           <section className="flex flex-col gap-4 pb-8">
             {/* Section header */}
             <div className="flex items-center justify-between px-1">
               <h3 className="font-label-caps text-label-caps text-on-surface-variant">最新告警列表 (LATEST ALERTS)</h3>
-              <button className="font-body-sm text-body-sm text-primary hover:underline">全部标记已读</button>
+              <button
+                className="font-body-sm text-body-sm text-primary hover:underline disabled:cursor-not-allowed disabled:text-on-surface-variant"
+                type="button"
+                disabled={faults.length === 0}
+                onClick={handleMarkAllRead}
+              >
+                全部标记已读
+              </button>
             </div>
 
             {/* Alert cards */}
@@ -235,14 +263,31 @@ export default function MobileAlert() {
                     {/* Action buttons (only for critical/major) */}
                     {severity !== 'minor' && (
                       <div className="mt-3 flex gap-2">
-                        <button className="flex-1 bg-primary text-on-primary font-body-sm text-body-sm py-2 rounded-lg font-medium">一键派单</button>
-                        <button className="flex-1 bg-surface border border-outline-variant text-on-surface font-body-sm text-body-sm py-2 rounded-lg font-medium">查看拓扑</button>
+                        <button
+                          type="button"
+                          className="flex-1 bg-primary text-on-primary font-body-sm text-body-sm py-2 rounded-lg font-medium"
+                          onClick={() => handleDispatch(fault)}
+                        >
+                          一键派单
+                        </button>
+                        <button
+                          type="button"
+                          className="flex-1 bg-surface border border-outline-variant text-on-surface font-body-sm text-body-sm py-2 rounded-lg font-medium"
+                          onClick={() => navigate('/map')}
+                        >
+                          查看拓扑
+                        </button>
                       </div>
                     )}
                   </div>
                 </article>
               )
             })}
+            {faults.length === 0 ? (
+              <div className="rounded-xl border border-outline-variant bg-surface p-6 text-center text-body-sm font-body-sm text-on-surface-variant">
+                当前没有未读移动告警。
+              </div>
+            ) : null}
           </section>
         </main>
       </div>

@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useECharts } from '@/hooks/useECharts'
 import { fetchStationDetail } from '@/api/stations'
-import { fetchFaults } from '@/api/faults'
 import { COLORS, FONT, mergeOption } from '@/theme'
 import { StatusBadge } from '@/components/StatusBadge'
-import type { StationDetail, FaultLog } from '@/types/api'
+import type { StationDetail } from '@/types/api'
 
 /* ── Status text to StatusBadge type mapping ──────────── */
 function severityToStatus(level: string | null): 'critical' | 'warning' | 'info' | 'normal' | 'offline' {
@@ -22,24 +21,20 @@ function severityToStatus(level: string | null): 'critical' | 'warning' | 'info'
 
 export default function StationDetailPage() {
   const { id: stationId } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const chartRef = useRef<HTMLDivElement>(null)
 
   const [station, setStation] = useState<StationDetail | null>(null)
-  const [faults, setFaults] = useState<FaultLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!stationId) return
     setLoading(true)
-    Promise.all([
-      fetchStationDetail(stationId),
-      fetchFaults(10),
-    ])
-      .then(([stationData, faultData]) => {
+    setError(null)
+    fetchStationDetail(stationId)
+      .then((stationData) => {
         setStation(stationData)
-        /* Filter faults by station */
-        setFaults(faultData.filter((f) => f.station_id === stationId))
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
@@ -72,7 +67,7 @@ export default function StationDetailPage() {
         },
       },
       legend: {
-        data: ['RSRP', 'SINR', 'BLER', 'Bandwidth'],
+        data: ['RSRP', 'SINR', 'BER', 'PRB利用率'],
         textStyle: { color: COLORS.onSurfaceVariant, fontFamily: FONT.sans },
         icon: 'circle',
       },
@@ -94,7 +89,7 @@ export default function StationDetailPage() {
       yAxis: [
         {
           type: 'value',
-          name: 'Signal',
+          name: 'RSRP/SINR',
           nameTextStyle: { color: COLORS.onSurfaceVariant },
           axisLine: { show: false },
           axisTick: { show: false },
@@ -103,7 +98,7 @@ export default function StationDetailPage() {
         },
         {
           type: 'value',
-          name: 'BW (Mbps)',
+          name: 'PRB (%)',
           nameTextStyle: { color: COLORS.onSurfaceVariant },
           position: 'right',
           axisLine: { show: false },
@@ -132,7 +127,7 @@ export default function StationDetailPage() {
           data: metrics.map((m) => m.sinr ?? null),
         },
         {
-          name: 'BLER',
+          name: 'BER',
           type: 'line',
           smooth: true,
           symbol: 'none',
@@ -141,7 +136,7 @@ export default function StationDetailPage() {
           data: metrics.map((m) => m.ber ?? null),
         },
         {
-          name: 'Bandwidth',
+          name: 'PRB利用率',
           type: 'line',
           yAxisIndex: 1,
           smooth: true,
@@ -178,9 +173,9 @@ export default function StationDetailPage() {
     )
   }
 
-  const statusColor = station.status?.toLowerCase() === 'online' || station.status?.toLowerCase() === 'active'
-    ? 'text-[#10B981]'
-    : 'text-on-surface-variant'
+  const isStationActive = station.status?.toLowerCase() === 'online' || station.status?.toLowerCase() === 'active'
+  const statusColor = isStationActive ? 'text-[#10B981]' : 'text-on-surface-variant'
+  const faults = station.recent_faults ?? []
 
   return (
     <div className="max-w-7xl mx-auto space-y-gutter animate-fade-in">
@@ -193,8 +188,8 @@ export default function StationDetailPage() {
             <p className="font-body-sm text-body-sm text-secondary mt-1">Base Station Overview</p>
           </div>
           <div className="flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-full border border-outline-variant">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-            <span className="font-label-caps text-label-caps text-on-surface">ACTIVE</span>
+            <div className={`w-2.5 h-2.5 rounded-full ${isStationActive ? 'bg-[#10B981]' : 'bg-on-surface-variant'}`} />
+            <span className="font-label-caps text-label-caps text-on-surface">{station.status ?? 'UNKNOWN'}</span>
           </div>
         </div>
 
@@ -240,6 +235,9 @@ export default function StationDetailPage() {
       {/* ── Middle: Metrics Trend Chart ───────────────────── */}
       <div className="bg-surface border border-outline-variant rounded-xl p-card-padding">
         <h2 className="font-headline-md text-headline-md text-on-surface mb-6">基站运行指标趋势</h2>
+        <p className="font-body-sm text-body-sm text-on-surface-variant mb-4">
+          最近 {station.recent_metrics?.length ?? 0} 条采样，RSRP 单位 dBm，SINR 单位 dB，PRB 利用率单位 %。
+        </p>
         <div ref={chartRef} style={{ height: 350, width: '100%', position: 'relative' }} />
       </div>
 
@@ -257,6 +255,7 @@ export default function StationDetailPage() {
                 <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">Fault Code</th>
                 <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">Description</th>
                 <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">Status</th>
+                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider text-right">Action</th>
               </tr>
             </thead>
             <tbody className="font-body-sm text-body-sm text-on-surface">
@@ -274,11 +273,21 @@ export default function StationDetailPage() {
                         {fault.status ?? '-'}
                       </span>
                     </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/faults/${fault.fault_id}/diagnosis`)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-primary hover:bg-primary-container transition-colors font-body-sm text-body-sm"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">troubleshoot</span>
+                        查看诊断
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td className="py-6 px-4 text-center text-on-surface-variant col-span-5">该基站暂无故障记录</td>
+                  <td colSpan={6} className="py-6 px-4 text-center text-on-surface-variant">该基站暂无故障记录</td>
                 </tr>
               )}
             </tbody>
