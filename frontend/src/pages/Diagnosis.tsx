@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { BreadcrumbNav } from '@/components/BreadcrumbNav'
 import { enhanceDiagnosis, fetchDiagnosis } from '@/api/diagnosis'
+import { updateFaultStatus } from '@/api/faults'
 import { loadStoredLlmConfig, normalizeLlmConfig, saveLlmConfig } from '@/utils/llmConfig'
 import type { DiagnosisAction, DiagnosisDisplay, DiagnosisRecord } from '@/types/api'
 
@@ -58,6 +59,78 @@ function fallbackDisplay(data: DiagnosisRecord): DiagnosisDisplay {
   }
 }
 
+function formatConfidence(value: number | null): string {
+  if (value == null) return '-'
+  const percent = value <= 1 ? value * 100 : value
+  return `${percent.toFixed(1)}%`
+}
+
+function buildDiagnosisMarkdown(data: DiagnosisRecord, display: DiagnosisDisplay): string {
+  const fault = data.fault
+  const actionLines = display.suggested_actions.map((action, index) => (
+    `${index + 1}. ${action.title}：${action.description}`
+  ))
+  const evidenceLines = display.evidence.length > 0
+    ? display.evidence.map((item) => `- ${item}`).join('\n')
+    : '- 暂无补充依据'
+  const symptomLines = display.key_symptoms.length > 0
+    ? display.key_symptoms.map((item) => `- ${item}`).join('\n')
+    : '- 暂无关键症状'
+
+  return [
+    '# 通信故障诊断报告',
+    '',
+    '## 故障信息',
+    '',
+    `- 故障编号：${fault.fault_id}`,
+    `- 故障类型：${display.fault_type}`,
+    `- 严重程度：${fault.fault_level ?? '-'}`,
+    `- 处理状态：${fault.status ?? '未处理'}`,
+    `- 检测时间：${fault.detected_at ?? '-'}`,
+    `- 关联基站：${fault.station_id ?? '-'}`,
+    `- 模型置信度：${formatConfidence(fault.confidence)}`,
+    `- 诊断来源：${display.source_label}${display.llm_model ? ` (${display.llm_model})` : ''}`,
+    '',
+    '## 原因分析',
+    '',
+    display.root_cause,
+    '',
+    '## 关键症状',
+    '',
+    symptomLines,
+    '',
+    '## 诊断依据',
+    '',
+    evidenceLines,
+    '',
+    '## 处理建议',
+    '',
+    actionLines.length > 0 ? actionLines.join('\n') : '1. 人工复核：请结合现场告警和关键 KPI 确认故障根因后处理。',
+    '',
+    '## 影响范围',
+    '',
+    display.affected_scope,
+    '',
+    '## 复核要求',
+    '',
+    `- 是否需要人工复核：${display.review_required ? '是' : '否'}`,
+    `- 复核理由：${display.review_reason}`,
+    '',
+  ].join('\n')
+}
+
+function downloadTextFile(filename: string, content: string) {
+  const blob = new Blob([`\ufeff${content}`], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 /* ── Main Page ───────────────────────────────────────────── */
 
 export default function Diagnosis() {
@@ -65,6 +138,7 @@ export default function Diagnosis() {
   const [data, setData] = useState<DiagnosisRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [enhancing, setEnhancing] = useState(false)
+  const [accepting, setAccepting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -111,6 +185,42 @@ export default function Diagnosis() {
     }
   }
 
+  const handleAcceptSuggestion = async () => {
+    if (!data) return
+    const currentStatus = data.fault.status || '未处理'
+    if (currentStatus !== '未处理') {
+      setNotice(`当前故障状态为“${currentStatus}”，无需重复采纳建议。`)
+      return
+    }
+    setAccepting(true)
+    setNotice(null)
+    try {
+      const updated = await updateFaultStatus(data.fault.fault_id, '处理中')
+      setData((current) => current
+        ? {
+          ...current,
+          fault: {
+            ...current.fault,
+            status: updated.status,
+          },
+        }
+        : current)
+      setNotice(`已采纳诊断建议，故障 ${updated.fault_id} 状态已更新为 ${updated.status || '处理中'}。`)
+    } catch (e) {
+      setNotice(e instanceof Error ? `采纳建议失败：${e.message}` : '采纳建议失败。')
+    } finally {
+      setAccepting(false)
+    }
+  }
+
+  const handleExportReport = () => {
+    if (!data) return
+    const display = data.display ?? fallbackDisplay(data)
+    const safeId = data.fault.fault_id.replace(/[\\/:*?"<>|]/g, '_')
+    downloadTextFile(`diagnosis_${safeId}.md`, buildDiagnosisMarkdown(data, display))
+    setNotice('诊断报告已导出为 Markdown 文件。')
+  }
+
   if (loading) {
     return (
       <div className="max-w-[1200px] mx-auto flex flex-col gap-gutter animate-fade-in">
@@ -137,6 +247,8 @@ export default function Diagnosis() {
   const display = data.display ?? fallbackDisplay(data)
   const confidence = fault.confidence == null ? null : (fault.confidence <= 1 ? fault.confidence * 100 : fault.confidence)
   const reviewRequired = display.review_required
+  const faultStatus = fault.status || '未处理'
+  const canAccept = faultStatus === '未处理'
 
   return (
     <div className="max-w-[1200px] mx-auto flex flex-col gap-gutter animate-fade-in">
@@ -165,15 +277,22 @@ export default function Diagnosis() {
           </button>
           <button
             className="px-4 py-2 rounded-lg bg-surface border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors font-body-sm text-body-sm flex items-center gap-2"
+            type="button"
+            onClick={handleExportReport}
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
             导出报告
           </button>
           <button
-            className="px-4 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-sm font-body-sm text-body-sm flex items-center gap-2"
+            className="px-4 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-sm font-body-sm text-body-sm flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-70"
+            type="button"
+            onClick={handleAcceptSuggestion}
+            disabled={accepting || !canAccept}
           >
-            <span className="material-symbols-outlined text-[18px]">done_all</span>
-            采纳建议
+            <span className={`material-symbols-outlined text-[18px] ${accepting ? 'animate-spin-slow' : ''}`}>
+              {accepting ? 'progress_activity' : 'done_all'}
+            </span>
+            {accepting ? '提交中' : canAccept ? '采纳建议' : '已采纳'}
           </button>
         </div>
       </div>
@@ -241,6 +360,10 @@ export default function Diagnosis() {
           <div className="flex flex-col gap-1">
             <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">故障类型</span>
             <span className="font-body-sm text-body-sm text-on-surface">{display.fault_type}</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">处理状态</span>
+            <span className="font-body-sm text-body-sm text-on-surface">{faultStatus}</span>
           </div>
         </div>
       </section>

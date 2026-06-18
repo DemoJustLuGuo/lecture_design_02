@@ -36,14 +36,20 @@ client.interceptors.response.use(
       const detail = error.response.data?.detail ?? error.response.data?.message ?? ''
       const message = typeof detail === 'string'
         ? detail
-        : detail?.message || `请求失败 (HTTP ${status})`
+        : detail?.message || (
+          status === 502 || status === 503 || status === 504
+            ? `后端服务未启动或 /api 代理不可用 (HTTP ${status})`
+            : `请求失败 (HTTP ${status})`
+        )
       const apiError = new Error(message)
       apiError.name = 'ApiError'
       return Promise.reject(apiError)
     }
 
     // Timeout or network failure
-    const message = error.code === 'ECONNABORTED' ? '请求超时' : '网络连接异常'
+    const message = error.code === 'ECONNABORTED'
+      ? '请求超时，请确认后端服务是否仍在运行。'
+      : '网络连接异常，请确认 FastAPI 后端已在 127.0.0.1:8000 启动。'
     const apiError = new Error(message)
     apiError.name = 'ApiError'
     return Promise.reject(apiError)
