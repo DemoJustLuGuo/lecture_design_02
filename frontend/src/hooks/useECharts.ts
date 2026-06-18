@@ -1,5 +1,24 @@
 import { useEffect, useRef, type RefObject } from 'react'
-import * as echarts from 'echarts'
+import { BarChart, LineChart, PieChart } from 'echarts/charts'
+import {
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  TooltipComponent,
+} from 'echarts/components'
+import { init, use, type ECharts, type EChartsCoreOption } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+
+use([
+  BarChart,
+  LineChart,
+  PieChart,
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  TooltipComponent,
+  CanvasRenderer,
+])
 
 /**
  * Custom hook for ECharts initialization, resize handling, and cleanup.
@@ -11,9 +30,9 @@ import * as echarts from 'echarts'
  */
 export function useECharts(
   containerRef: RefObject<HTMLDivElement | null>,
-  optionFactory: () => echarts.EChartsOption,
-): echarts.ECharts | null {
-  const chartRef = useRef<echarts.ECharts | null>(null)
+  optionFactory: () => EChartsCoreOption,
+): ECharts | null {
+  const chartRef = useRef<ECharts | null>(null)
   const resizeCleanupRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -22,7 +41,7 @@ export function useECharts(
 
     let chart = chartRef.current
     if (!chart || chart.isDisposed()) {
-      chart = echarts.init(container)
+      chart = init(container)
       chartRef.current = chart
 
       let resizeTimer: ReturnType<typeof setTimeout> | null = null

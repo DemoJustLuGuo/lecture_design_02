@@ -1,4 +1,6 @@
-import type { EChartsOption } from 'echarts'
+import type { EChartsCoreOption } from 'echarts/core'
+
+type EChartsOption = EChartsCoreOption
 
 /* ── Color Constants ─────────────────────────────────────────── */
 export const COLORS = {
@@ -224,24 +226,34 @@ export const baseEChartsOption: EChartsOption = {
  * Deep-merges axis, tooltip, and title; replaces series / data.
  */
 export function mergeOption(componentOption: EChartsOption): EChartsOption {
+  const asRecord = (value: unknown): Record<string, unknown> => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+    return value as Record<string, unknown>
+  }
+
+  const mergeAxis = (baseAxis: unknown, componentAxis: unknown) => {
+    if (Array.isArray(componentAxis)) return componentAxis
+    return {
+      ...asRecord(baseAxis),
+      ...asRecord(componentAxis),
+    }
+  }
+
+  const baseTooltip = asRecord(baseEChartsOption.tooltip)
+  const componentTooltip = asRecord(componentOption.tooltip)
+
   return {
     ...baseEChartsOption,
     ...componentOption,
     tooltip: {
-      ...baseEChartsOption.tooltip,
-      ...componentOption.tooltip,
+      ...baseTooltip,
+      ...componentTooltip,
       textStyle: {
-        ...(baseEChartsOption.tooltip as Record<string, unknown>)?.textStyle as Record<string, unknown>,
-        ...(componentOption.tooltip as Record<string, unknown>)?.textStyle as Record<string, unknown>,
+        ...asRecord(baseTooltip.textStyle),
+        ...asRecord(componentTooltip.textStyle),
       },
     },
-    xAxis: {
-      ...baseEChartsOption.xAxis,
-      ...(componentOption.xAxis as Record<string, unknown>),
-    },
-    yAxis: {
-      ...baseEChartsOption.yAxis,
-      ...(componentOption.yAxis as Record<string, unknown>),
-    },
+    xAxis: mergeAxis(baseEChartsOption.xAxis, componentOption.xAxis),
+    yAxis: mergeAxis(baseEChartsOption.yAxis, componentOption.yAxis),
   }
 }
