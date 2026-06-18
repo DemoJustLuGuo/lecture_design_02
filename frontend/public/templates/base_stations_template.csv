@@ -1,0 +1,2 @@
+station_id,source_dataset,gnodeb_id,cell_id,pci,longitude,latitude,height,azimuth,downtilt,tx_power,status
+EXT_BS_001,external_demo,gNB_EXT_001,CELL_001,101,116.3975,39.9087,35,90,6,46,normal

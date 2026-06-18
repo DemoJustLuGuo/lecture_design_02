@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { fetchDashboardSummary } from '@/api/dashboard'
 import {
   commitSimulationPreview,
   generateSimulationData,
@@ -13,7 +14,12 @@ import {
   saveLlmConfig,
   type LlmConfigForm,
 } from '@/utils/llmConfig'
-import type { SimulationGenerateResult, SimulationImportResult, SimulationResult } from '@/types/api'
+import type {
+  DashboardSummary,
+  SimulationGenerateResult,
+  SimulationImportResult,
+  SimulationResult,
+} from '@/types/api'
 
 type Message = {
   tone: 'success' | 'error' | 'info'
@@ -25,8 +31,41 @@ type DataActionResult =
   | { kind: 'generate'; data: SimulationGenerateResult }
   | { kind: 'import'; data: SimulationImportResult }
 
+type DemoStepState = 'done' | 'active' | 'pending' | 'optional'
+
+type DemoStep = {
+  title: string
+  value: string
+  detail: string
+  state: DemoStepState
+}
+
 function countText(value: number | undefined): string {
   return value == null ? '--' : value.toLocaleString('zh-CN')
+}
+
+function percentText(value: number | null | undefined): string {
+  return value == null ? '--' : `${(value * 100).toFixed(1)}%`
+}
+
+function stepStateClass(state: DemoStepState): string {
+  const classes: Record<DemoStepState, string> = {
+    done: 'border-tertiary/30 bg-tertiary-container/30 text-tertiary',
+    active: 'border-primary/30 bg-primary-container/40 text-primary',
+    pending: 'border-outline-variant bg-surface-container-low text-on-surface-variant',
+    optional: 'border-outline-variant bg-surface text-on-surface-variant',
+  }
+  return classes[state]
+}
+
+function stepDotClass(state: DemoStepState): string {
+  const classes: Record<DemoStepState, string> = {
+    done: 'bg-tertiary',
+    active: 'bg-primary',
+    pending: 'bg-outline',
+    optional: 'bg-outline-variant',
+  }
+  return classes[state]
 }
 
 function tableLabel(key: string): string {
@@ -53,17 +92,35 @@ function actionText(result: DataActionResult | null): string {
 
 export default function Settings() {
   const importInputRef = useRef<HTMLInputElement>(null)
+  const baseStationInputRef = useRef<HTMLInputElement>(null)
   const [llmConfig, setLlmConfig] = useState<LlmConfigForm>(() => loadStoredLlmConfig())
   const [message, setMessage] = useState<Message | null>(null)
   const [busy, setBusy] = useState(false)
+  const [summary, setSummary] = useState<DashboardSummary | null>(null)
+  const [statusLoading, setStatusLoading] = useState(true)
+  const [statusError, setStatusError] = useState<string | null>(null)
   const [dataResult, setDataResult] = useState<DataActionResult | null>(null)
   const [pendingGeneration, setPendingGeneration] = useState<SimulationGenerateResult | null>(null)
+  const [baseStationCsv, setBaseStationCsv] = useState<File | null>(null)
   const [generateForm, setGenerateForm] = useState({
     station_count: 20,
     metric_count: 5000,
     fault_ratio: 0.15,
     seed: 42,
   })
+
+  const loadSystemStatus = useCallback(async () => {
+    setStatusLoading(true)
+    setStatusError(null)
+    try {
+      const result = await fetchDashboardSummary()
+      setSummary(result)
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : '系统状态读取失败。')
+    } finally {
+      setStatusLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     loadLocalLlmConfig()
@@ -75,6 +132,88 @@ export default function Settings() {
         // Local demo config is optional.
       })
   }, [])
+
+  useEffect(() => {
+    void loadSystemStatus()
+  }, [loadSystemStatus])
+
+  const normalizedLlmConfig = useMemo(() => normalizeLlmConfig(llmConfig), [llmConfig])
+  const hasRuntimeData = Boolean(summary && (summary.station_count > 0 || summary.fault_count > 0))
+  const hasFaults = Boolean(summary && summary.fault_count > 0)
+  const hasModelEvaluation = Boolean(
+    summary &&
+      (summary.classification_accuracy != null ||
+        summary.classification_f1 != null ||
+        summary.detection_latency_ms != null),
+  )
+  const hasLlmConfig = normalizedLlmConfig.api_key.trim().length > 0
+  const hasPreview = Boolean(pendingGeneration?.preview_id)
+
+  const demoSteps = useMemo<DemoStep[]>(() => {
+    return [
+      {
+        title: '1. 运行态数据库',
+        value: hasRuntimeData ? '已有演示数据' : '空白待输入',
+        detail: hasRuntimeData
+          ? `当前 ${countText(summary?.station_count)} 个基站、${countText(summary?.fault_count)} 条故障。`
+          : '当前 SQLite 业务表为空，适合从设置页开始演示数据接入。',
+        state: hasRuntimeData ? 'done' : 'active',
+      },
+      {
+        title: '2. 数据准备',
+        value: hasPreview ? '预览待写入' : hasRuntimeData ? '已写入 SQLite' : '待生成或导入',
+        detail: hasPreview
+          ? `预览批次 ${pendingGeneration?.preview_id} 已生成，确认后写入 SQLite。`
+          : hasRuntimeData
+            ? '可直接进入监控总览、故障日志和模型评估页面。'
+            : '可重载 processed 数据、生成合成数据或导入标准 CSV。',
+        state: hasPreview ? 'active' : hasRuntimeData ? 'done' : 'pending',
+      },
+      {
+        title: '3. 故障分析',
+        value: hasFaults ? '可进入诊断流程' : '暂无故障日志',
+        detail: hasFaults
+          ? `其中严重故障 ${countText(summary?.severe_fault_count)} 条，可在故障日志中进入诊断。`
+          : '写入数据后，故障日志和地图会展示检测、分类和定位结果。',
+        state: hasFaults ? 'done' : hasRuntimeData ? 'active' : 'pending',
+      },
+      {
+        title: '4. 模型评估',
+        value: hasModelEvaluation ? '评估指标可展示' : '暂无评估记录',
+        detail: hasModelEvaluation
+          ? `分类准确率 ${percentText(summary?.classification_accuracy)}，F1 ${percentText(summary?.classification_f1)}。`
+          : '写入阶段数据后，可在模型评估页展示准确率、F1 和定位误差。',
+        state: hasModelEvaluation ? 'done' : hasRuntimeData ? 'active' : 'pending',
+      },
+      {
+        title: '5. AI 增强诊断',
+        value: hasLlmConfig ? '已配置 API Key' : '可选配置',
+        detail: hasLlmConfig
+          ? `诊断页将使用 ${normalizedLlmConfig.model || '当前模型'} 尝试增强建议。`
+          : '未配置时仍使用规则诊断，演示不会依赖外部网络。',
+        state: hasLlmConfig ? 'done' : 'optional',
+      },
+    ]
+  }, [
+    hasFaults,
+    hasLlmConfig,
+    hasModelEvaluation,
+    hasPreview,
+    hasRuntimeData,
+    normalizedLlmConfig.model,
+    pendingGeneration?.preview_id,
+    summary?.classification_accuracy,
+    summary?.classification_f1,
+    summary?.fault_count,
+    summary?.severe_fault_count,
+    summary?.station_count,
+  ])
+
+  const nextAction = hasPreview
+    ? '下一步：点击“写入 SQLite”，再进入监控总览查看新数据。'
+    : hasRuntimeData
+      ? '下一步：进入故障日志选择样本，打开诊断建议并按需触发 AI 增强。'
+      : '下一步：在数据表管理中重载 processed 数据、生成合成数据或导入 CSV。'
 
   const handleSaveLlmConfig = () => {
     const normalized = normalizeLlmConfig(llmConfig)
@@ -97,7 +236,8 @@ export default function Settings() {
       const result = await runSimulationRefresh()
       setDataResult({ kind: 'refresh', data: result })
       setPendingGeneration(null)
-      setMessage({ tone: 'success', text: '已将当前 processed 数据重载到 SQLite。' })
+      await loadSystemStatus()
+      setMessage({ tone: 'success', text: '已将当前 processed 数据重载到 SQLite，并刷新系统状态。' })
     } catch (error) {
       setMessage({ tone: 'error', text: error instanceof Error ? error.message : '重载 SQLite 失败。' })
     } finally {
@@ -131,7 +271,8 @@ export default function Settings() {
       const result = await commitSimulationPreview(pendingGeneration.preview_id)
       setDataResult({ kind: 'refresh', data: result })
       setPendingGeneration(null)
-      setMessage({ tone: 'success', text: '预览数据已写入 SQLite，刷新页面即可查看新数据。' })
+      await loadSystemStatus()
+      setMessage({ tone: 'success', text: '预览数据已写入 SQLite，并刷新系统状态。' })
     } catch (error) {
       setMessage({ tone: 'error', text: error instanceof Error ? error.message : '写入 SQLite 失败。' })
     } finally {
@@ -148,12 +289,16 @@ export default function Settings() {
     try {
       const result = await importSimulationData({
         networkMetrics: file,
+        baseStations: baseStationCsv,
         sourceName: 'settings_upload',
         batchNote: 'settings_page_import',
       })
       setDataResult({ kind: 'import', data: result })
       setPendingGeneration(null)
-      setMessage({ tone: 'success', text: '外部标准 CSV 已追加导入 SQLite。' })
+      setBaseStationCsv(null)
+      if (baseStationInputRef.current) baseStationInputRef.current.value = ''
+      await loadSystemStatus()
+      setMessage({ tone: 'success', text: '外部标准 CSV 已追加导入 SQLite，并刷新系统状态。' })
     } catch (error) {
       setMessage({ tone: 'error', text: error instanceof Error ? error.message : 'CSV 导入失败。' })
     } finally {
@@ -188,6 +333,76 @@ export default function Settings() {
           {message.text}
         </div>
       ) : null}
+
+      <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-card-padding">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[22px]">route</span>
+              <h2 className="font-title-lg text-title-lg text-on-surface">演示流程状态</h2>
+            </div>
+            <p className="mt-1 font-body-sm text-body-sm text-on-surface-variant">
+              根据当前 SQLite、预览批次和大模型配置判断系统所处步骤，避免空库演示时误认为数据加载异常。
+            </p>
+          </div>
+          <button
+            className="min-h-11 rounded-lg border border-outline-variant bg-surface px-4 py-2 text-body-sm font-body-sm text-on-surface hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-70"
+            type="button"
+            onClick={() => void loadSystemStatus()}
+            disabled={statusLoading || busy}
+          >
+            {statusLoading ? '刷新中...' : '刷新状态'}
+          </button>
+        </div>
+
+        {statusError ? (
+          <div className="mb-4 rounded-lg border border-error/30 bg-error-container px-4 py-3 text-body-sm font-body-sm text-on-error-container">
+            {statusError}
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
+          {demoSteps.map((step) => (
+            <div key={step.title} className={['rounded-lg border p-3', stepStateClass(step.state)].join(' ')}>
+              <div className="mb-2 flex items-center gap-2">
+                <span className={['h-2.5 w-2.5 rounded-full', stepDotClass(step.state)].join(' ')} />
+                <span className="font-label-caps text-[10px] uppercase tracking-normal">{step.title}</span>
+              </div>
+              <div className="font-title-sm text-title-sm text-on-surface">{step.value}</div>
+              <p className="mt-1 min-h-14 font-body-sm text-body-sm text-on-surface-variant">{step.detail}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+          <div className="rounded-lg border border-outline-variant bg-surface px-3 py-2">
+            <div className="font-label-caps text-[10px] text-on-surface-variant uppercase">基站</div>
+            <div className="font-data-mono text-data-mono text-on-surface">{countText(summary?.station_count)}</div>
+          </div>
+          <div className="rounded-lg border border-outline-variant bg-surface px-3 py-2">
+            <div className="font-label-caps text-[10px] text-on-surface-variant uppercase">故障</div>
+            <div className="font-data-mono text-data-mono text-on-surface">{countText(summary?.fault_count)}</div>
+          </div>
+          <div className="rounded-lg border border-outline-variant bg-surface px-3 py-2">
+            <div className="font-label-caps text-[10px] text-on-surface-variant uppercase">严重故障</div>
+            <div className="font-data-mono text-data-mono text-on-surface">{countText(summary?.severe_fault_count)}</div>
+          </div>
+          <div className="rounded-lg border border-outline-variant bg-surface px-3 py-2">
+            <div className="font-label-caps text-[10px] text-on-surface-variant uppercase">分类准确率</div>
+            <div className="font-data-mono text-data-mono text-on-surface">
+              {percentText(summary?.classification_accuracy)}
+            </div>
+          </div>
+          <div className="rounded-lg border border-outline-variant bg-surface px-3 py-2">
+            <div className="font-label-caps text-[10px] text-on-surface-variant uppercase">LLM</div>
+            <div className="font-data-mono text-data-mono text-on-surface">{hasLlmConfig ? '已配置' : '未配置'}</div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-primary/30 bg-primary-container/30 px-4 py-3 font-body-sm text-body-sm text-on-surface">
+          {nextAction}
+        </div>
+      </section>
 
       <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-card-padding">
         <div className="mb-4 flex items-center gap-2">
@@ -343,19 +558,50 @@ export default function Settings() {
               上传 network_metrics 格式的 CSV。该方式是追加导入，不直接替换整个 SQLite 文件。
             </p>
             <input
+              ref={baseStationInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(event) => setBaseStationCsv(event.target.files?.[0] ?? null)}
+            />
+            <input
               ref={importInputRef}
               type="file"
               accept=".csv,text/csv"
               className="hidden"
               onChange={handleImportCsv}
             />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a
+                className="rounded-lg border border-outline-variant bg-surface-container-low px-3 py-1.5 text-body-sm font-body-sm text-on-surface hover:bg-surface-container"
+                href="/templates/network_metrics_template.csv"
+                download
+              >
+                下载指标模板
+              </a>
+              <a
+                className="rounded-lg border border-outline-variant bg-surface-container-low px-3 py-1.5 text-body-sm font-body-sm text-on-surface hover:bg-surface-container"
+                href="/templates/base_stations_template.csv"
+                download
+              >
+                下载基站模板
+              </a>
+            </div>
             <button
-              className="mt-4 w-full rounded-lg border border-outline-variant bg-surface px-4 py-2 text-body-sm font-body-sm text-on-surface hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-3 w-full rounded-lg border border-outline-variant bg-surface px-4 py-2 text-body-sm font-body-sm text-on-surface hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-70"
+              type="button"
+              onClick={() => baseStationInputRef.current?.click()}
+              disabled={busy}
+            >
+              {baseStationCsv ? `已选择基站 CSV：${baseStationCsv.name}` : '选择基站 CSV（可选）'}
+            </button>
+            <button
+              className="mt-3 w-full rounded-lg border border-outline-variant bg-surface px-4 py-2 text-body-sm font-body-sm text-on-surface hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-70"
               type="button"
               onClick={() => importInputRef.current?.click()}
               disabled={busy}
             >
-              选择 CSV 并导入
+              选择指标 CSV 并导入
             </button>
           </div>
         </div>
