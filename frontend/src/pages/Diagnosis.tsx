@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { BreadcrumbNav } from '@/components/BreadcrumbNav'
+import { EmptyState } from '@/components/EmptyState'
 import { enhanceDiagnosis, fetchDiagnosis } from '@/api/diagnosis'
 import { updateFaultStatus } from '@/api/faults'
 import { loadStoredLlmConfig, normalizeLlmConfig, saveLlmConfig } from '@/utils/llmConfig'
@@ -143,8 +144,13 @@ export default function Diagnosis() {
   const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!faultId) return
+    if (!faultId) {
+      setLoading(false)
+      setError('未选择故障记录。')
+      return
+    }
     setLoading(true)
+    setError(null)
     fetchDiagnosis(faultId)
       .then(setData)
       .catch((e) => setError(e.message))
@@ -235,10 +241,21 @@ export default function Diagnosis() {
   if (error || !data) {
     return (
       <div className="max-w-[1200px] mx-auto flex flex-col gap-gutter animate-fade-in">
-        <div className="flex items-center justify-center h-[400px] text-error font-body-md">
-          <span className="material-symbols-outlined mr-2">error</span>
-          {error ?? '未找到诊断数据'}
-        </div>
+        <BreadcrumbNav
+          items={[
+            { label: '故障日志', path: '/faults' },
+            { label: '诊断建议' },
+          ]}
+        />
+        <EmptyState
+          icon="troubleshoot"
+          title="暂无可展示的诊断记录"
+          description={error ?? '当前没有找到对应故障。请先导入或生成网络数据，并从故障日志中选择一条记录进入诊断页。'}
+          actionLabel="前往故障日志"
+          actionTo="/faults"
+          secondaryActionLabel="前往系统设置"
+          secondaryActionTo="/settings"
+        />
       </div>
     )
   }

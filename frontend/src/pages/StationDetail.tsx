@@ -4,6 +4,7 @@ import { useECharts } from '@/hooks/useECharts'
 import { fetchStationDetail } from '@/api/stations'
 import { COLORS, FONT, mergeOption } from '@/theme'
 import { StatusBadge } from '@/components/StatusBadge'
+import { EmptyState } from '@/components/EmptyState'
 import type { StationDetail } from '@/types/api'
 
 /* ── Status text to StatusBadge type mapping ──────────── */
@@ -165,10 +166,15 @@ export default function StationDetailPage() {
   if (error || !station) {
     return (
       <div className="max-w-7xl mx-auto space-y-gutter animate-fade-in">
-        <div className="flex items-center justify-center h-[400px] text-error font-body-md">
-          <span className="material-symbols-outlined mr-2">error</span>
-          {error ?? '未找到基站数据'}
-        </div>
+        <EmptyState
+          icon="cell_tower"
+          title="未找到基站数据"
+          description={error ?? '当前演示库中没有对应基站记录。请先导入或生成基站工参和网络指标数据。'}
+          actionLabel="前往基站管理"
+          actionTo="/stations"
+          secondaryActionLabel="前往系统设置"
+          secondaryActionTo="/settings"
+        />
       </div>
     )
   }
@@ -238,7 +244,18 @@ export default function StationDetailPage() {
         <p className="font-body-sm text-body-sm text-on-surface-variant mb-4">
           最近 {station.recent_metrics?.length ?? 0} 条采样，RSRP 单位 dBm，SINR 单位 dB，PRB 利用率单位 %。
         </p>
-        <div ref={chartRef} style={{ height: 350, width: '100%', position: 'relative' }} />
+        {station.recent_metrics?.length ? (
+          <div ref={chartRef} style={{ height: 350, width: '100%', position: 'relative' }} />
+        ) : (
+          <EmptyState
+            icon="monitoring"
+            title="暂无运行指标采样"
+            description="该基站当前没有关联网络指标。导入指标数据后可查看 RSRP、SINR、BER 和 PRB 利用率趋势。"
+            actionLabel="导入数据"
+            actionTo="/settings"
+            className="py-8"
+          />
+        )}
       </div>
 
       {/* ── Bottom: Fault Records Table ───────────────────── */}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { MetricCard } from '@/components/MetricCard'
 import { ChartPanel } from '@/components/ChartPanel'
 import { StatusBadge } from '@/components/StatusBadge'
+import { EmptyState } from '@/components/EmptyState'
 import { fetchDashboardSummary, fetchFaultTrend } from '@/api/dashboard'
 import { fetchFaults } from '@/api/faults'
 import { commitSimulationPreview, generateSimulationData, importSimulationData, runSimulationRefresh } from '@/api/simulation'
@@ -211,6 +212,12 @@ export default function Dashboard() {
   const refreshResult = simulationResult?.kind === 'refresh' ? simulationResult.data : null
   const generateResult = simulationResult?.kind === 'generate' ? simulationResult.data : null
   const importResult = simulationResult?.kind === 'import' ? simulationResult.data : null
+  const isEmptyDatabase = Boolean(
+    summary
+    && summary.station_count === 0
+    && summary.fault_count === 0
+    && faults.length === 0,
+  )
 
   /* ── Count-up animated values ──────────────────────────── */
   const stationValue = useCountUp(summary?.station_count ?? 0, 1000)
@@ -601,6 +608,30 @@ export default function Dashboard() {
         </div>
       ) : null}
 
+      {isEmptyDatabase ? (
+        <EmptyState
+          icon="database"
+          title="当前系统处于空白演示状态"
+          description="SQLite 中暂未写入基站、网络指标和故障日志。请先进入系统设置生成或导入数据，再执行检测、分类、定位和诊断演示。"
+          actionLabel="前往系统设置"
+          actionTo="/settings"
+          secondaryActionLabel="在地图上框选生成"
+          secondaryActionTo="/map"
+        >
+          <div className="grid gap-2 text-left font-body-sm text-body-sm text-on-surface-variant sm:grid-cols-3">
+            <div className="rounded-lg border border-outline-variant bg-surface px-3 py-2">
+              1. 生成或导入网络数据
+            </div>
+            <div className="rounded-lg border border-outline-variant bg-surface px-3 py-2">
+              2. 写入 SQLite 演示库
+            </div>
+            <div className="rounded-lg border border-outline-variant bg-surface px-3 py-2">
+              3. 查看故障和诊断结果
+            </div>
+          </div>
+        </EmptyState>
+      ) : null}
+
       {/* ── Row 1: Metric Cards ─────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
         <MetricCard
@@ -608,14 +639,14 @@ export default function Dashboard() {
           value={stationValue}
           icon="wifi"
           iconColor="text-emerald-600"
-          trend={{ direction: 'up', value: '2%', color: 'text-emerald-600' }}
+          trend={isEmptyDatabase ? undefined : { direction: 'up', value: '2%', color: 'text-emerald-600' }}
         />
         <MetricCard
           label="当前告警数"
           value={faultValue}
           icon="warning"
           iconColor="text-amber-500"
-          trend={{ direction: 'down', value: '5%', color: 'text-emerald-600' }}
+          trend={isEmptyDatabase ? undefined : { direction: 'down', value: '5%', color: 'text-emerald-600' }}
         />
         <MetricCard
           label="严重故障数"
@@ -626,7 +657,7 @@ export default function Dashboard() {
         />
         <MetricCard
           label="检测准确率"
-          value={accuracyValue}
+          value={summary?.classification_accuracy == null ? '--' : accuracyValue}
           icon="troubleshoot"
           iconColor="text-cyan-600"
         />
@@ -691,6 +722,20 @@ export default function Dashboard() {
                   </td>
                 </tr>
               ))}
+              {faults.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8">
+                    <EmptyState
+                      icon="notifications_off"
+                      title="暂无实时告警"
+                      description="当前演示库还没有故障日志。导入或生成数据后，这里会显示最新故障记录。"
+                      actionLabel="导入或生成数据"
+                      actionTo="/settings"
+                      className="border-0 bg-transparent py-4"
+                    />
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchFaults } from '@/api/faults'
 import { useCountUp } from '@/hooks/useCountUp'
+import { EmptyState } from '@/components/EmptyState'
 import type { FaultLog } from '@/types/api'
 
 /* ── Alert severity config ──────────────────────────────── */
@@ -187,7 +188,11 @@ export default function MobileAlert() {
             </div>
 
             <h2 className="font-headline-md text-headline-md text-on-surface">严重网络故障</h2>
-            <p className="font-body-md text-on-surface-variant mt-1 text-center">系统检测到多处关键节点异常，需立即人工干预。</p>
+            <p className="font-body-md text-on-surface-variant mt-1 text-center">
+              {faults.length === 0
+                ? '当前演示库还没有移动端告警数据。'
+                : '系统检测到关键节点异常，需及时处理。'}
+            </p>
           </section>
 
           {message ? (
@@ -284,9 +289,16 @@ export default function MobileAlert() {
               )
             })}
             {faults.length === 0 ? (
-              <div className="rounded-xl border border-outline-variant bg-surface p-6 text-center text-body-sm font-body-sm text-on-surface-variant">
-                当前没有未读移动告警。
-              </div>
+              <EmptyState
+                icon="notifications_off"
+                title="暂无移动告警"
+                description="当前系统处于空白演示状态。导入或生成数据后，严重故障会在这里以移动端预警形式展示。"
+                actionLabel="前往系统设置"
+                actionTo="/settings"
+                secondaryActionLabel="查看故障日志"
+                secondaryActionTo="/faults"
+                className="bg-surface py-6"
+              />
             ) : null}
           </section>
         </main>

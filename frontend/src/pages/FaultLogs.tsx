@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { StatusBadge } from '@/components/StatusBadge'
+import { EmptyState } from '@/components/EmptyState'
 import { classifyFaults, fetchFaults, updateFaultStatus } from '@/api/faults'
 import type { FaultLog, FaultProcessStatus } from '@/types/api'
 import { FaultLevel } from '@/types/enums'
@@ -193,6 +194,12 @@ export default function FaultLogs() {
   const pageStart = filteredFaults.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
   const pageEnd = Math.min(currentPage * PAGE_SIZE, filteredFaults.length)
   const pagedFaults = filteredFaults.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const isEmptyDatabase = faults.length === 0
+    && !searchQuery.trim()
+    && typeFilter === 'all'
+    && severityFilter === 'all'
+    && statusFilter === 'all'
+    && sourceFilter === 'all'
 
   useEffect(() => {
     setPage(1)
@@ -277,6 +284,13 @@ export default function FaultLogs() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            className="flex items-center gap-2 px-4 py-2 bg-primary-container text-primary border border-primary/20 rounded-lg text-body-sm font-body-sm hover:bg-primary-container/80 transition-colors shadow-sm"
+            to="/settings"
+          >
+            <span className="material-symbols-outlined text-[18px]">database</span>
+            导入数据
+          </Link>
           <button
             className="flex items-center gap-2 px-4 py-2 bg-surface border border-outline-variant rounded-lg text-body-sm font-body-sm text-on-surface hover:bg-surface-container-low transition-colors shadow-sm"
             type="button"
@@ -508,8 +522,23 @@ export default function FaultLogs() {
               ))}
               {pagedFaults.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center font-body-sm text-body-sm text-on-surface-variant">
-                    当前筛选条件下没有故障记录。
+                  <td colSpan={9} className="px-4 py-8">
+                    {isEmptyDatabase ? (
+                      <EmptyState
+                        icon="history_toggle_off"
+                        title="暂无故障日志"
+                        description="当前系统还没有导入网络指标或生成故障分析结果。请先写入数据，再执行 AI 分类或查看诊断建议。"
+                        actionLabel="前往系统设置"
+                        actionTo="/settings"
+                        secondaryActionLabel="地图框选生成"
+                        secondaryActionTo="/map"
+                        className="border-0 bg-transparent py-4"
+                      />
+                    ) : (
+                      <div className="text-center font-body-sm text-body-sm text-on-surface-variant">
+                        当前筛选条件下没有故障记录。
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : null}

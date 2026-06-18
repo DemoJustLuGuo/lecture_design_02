@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useECharts } from '@/hooks/useECharts'
 import { useCountUp } from '@/hooks/useCountUp'
+import { EmptyState } from '@/components/EmptyState'
 import { fetchModelEvaluation } from '@/api/metrics'
 import { COLORS, FONT, mergeOption } from '@/theme'
 import type { ModelEvaluation, ConfusionMatrixData } from '@/types/api'
@@ -64,26 +65,18 @@ export default function ModelEval() {
 
   /* Prefer the classification evaluation because it carries the confusion matrix. */
   const evalData = evaluations.find((item) => item.confusion_matrix) ?? evaluations[0]
-  const accuracy = evalData?.accuracy != null ? toPercent(evalData.accuracy) : 84.75
-  const precision = evalData?.precision != null ? toPercent(evalData.precision) : 80.78
-  const recall = evalData?.recall != null ? toPercent(evalData.recall) : 91.03
-  const f1 = evalData?.f1 != null ? toPercent(evalData.f1) : 85.60
-  const localizationError = evalData?.localization_error_avg_m ?? 96.25
+  const hasEvaluation = evaluations.length > 0
+  const accuracy = evalData?.accuracy != null ? toPercent(evalData.accuracy) : 0
+  const precision = evalData?.precision != null ? toPercent(evalData.precision) : 0
+  const recall = evalData?.recall != null ? toPercent(evalData.recall) : 0
+  const f1 = evalData?.f1 != null ? toPercent(evalData.f1) : 0
+  const localizationError = evalData?.localization_error_avg_m ?? 0
   const confusionMatrix: ConfusionMatrixData | null = evalData?.confusion_matrix ?? null
 
   /* Default labels and matrix if API doesn't provide */
-  const defaultLabels = ['信道干扰', '基站故障', '天线偏移', '光纤断裂', '电源异常']
-  const defaultMatrix = [
-    [452, 12, 5, 0, 1],
-    [28, 389, 2, 15, 3],
-    [4, 1, 210, 0, 8],
-    [0, 11, 0, 521, 2],
-    [3, 7, 1, 0, 198],
-  ]
-
-  const labels = confusionMatrix?.labels ?? defaultLabels
-  const matrix = confusionMatrix?.matrix ?? defaultMatrix
-  const maxVal = Math.max(...matrix.flat())
+  const labels = confusionMatrix?.labels ?? []
+  const matrix = confusionMatrix?.matrix ?? []
+  const maxVal = matrix.length > 0 ? Math.max(...matrix.flat()) : 0
 
   /* Determine if below target */
   const target = 95
@@ -181,6 +174,28 @@ export default function ModelEval() {
           <span className="material-symbols-outlined mr-2">error</span>
           {error}
         </div>
+      </div>
+    )
+  }
+
+  if (!hasEvaluation) {
+    return (
+      <div className="max-w-[1440px] mx-auto space-y-gutter animate-fade-in">
+        <div>
+          <h3 className="font-headline-md text-headline-md text-on-surface">整体性能指标 (Overall Performance)</h3>
+          <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
+            当前还没有模型评估记录。
+          </p>
+        </div>
+        <EmptyState
+          icon="analytics"
+          title="暂无模型评估结果"
+          description="当前 SQLite 中没有写入模型评估记录。请先通过系统设置刷新阶段数据或生成演示数据，再回到这里查看准确率、混淆矩阵和定位误差。"
+          actionLabel="前往系统设置"
+          actionTo="/settings"
+          secondaryActionLabel="查看监控总览"
+          secondaryActionTo="/"
+        />
       </div>
     )
   }

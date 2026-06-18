@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { fetchStations } from '@/api/stations'
 import { fetchFaults } from '@/api/faults'
 import { commitSimulationPreview, generateAreaSimulationData } from '@/api/simulation'
+import { EmptyState } from '@/components/EmptyState'
 import type { Station, FaultLog, SimulationGenerateResult, SimulationResult } from '@/types/api'
 import { StationStatus, FaultLevel } from '@/types/enums'
 
@@ -470,7 +471,7 @@ export default function FaultMap() {
 
   /* ── Add markers when data arrives ────────────────────── */
   useEffect(() => {
-    if (!mapInstanceRef.current || stations.length === 0) return
+    if (!mapInstanceRef.current) return
 
     import('leaflet').then((L) => {
       const map = mapInstanceRef.current!
@@ -478,6 +479,7 @@ export default function FaultMap() {
         markerGroupRef.current.remove()
         markerGroupRef.current = null
       }
+      if (stations.length === 0 && faults.length === 0) return
       const markerGroup = L.featureGroup()
       markerGroupRef.current = markerGroup
 
@@ -567,6 +569,7 @@ export default function FaultMap() {
     : '--'
 
   const faultStats = useMemo(() => buildFaultStats(faults), [faults])
+  const isEmptyDatabase = totalStations === 0 && totalFaults === 0
 
   return (
     <div className="relative h-full min-h-0 w-full bg-surface-container-highest overflow-hidden animate-fade-in">
@@ -920,59 +923,82 @@ export default function FaultMap() {
                 {loadError}
               </div>
             )}
-            <div className="flex flex-col items-center justify-center gap-3 text-center">
-              <span className="material-symbols-outlined text-on-surface-variant text-[48px]">touch_app</span>
-              <h3 className="font-headline-md text-headline-md text-on-surface-variant">点击地图标记查看故障详情</h3>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">
-                有坐标的历史和AI入库故障会显示在地图上；缺少坐标的记录在下方列出。
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[18px]">location_off</span>
-                  <h4 className="font-title-sm text-title-sm text-on-surface">无坐标故障</h4>
+            {isEmptyDatabase ? (
+              <EmptyState
+                icon="map"
+                title="地图暂无基站与故障数据"
+                description="当前演示库为空。可以直接在地图上框选区域生成模拟数据，也可以到系统设置导入外部 CSV。"
+                secondaryActionLabel="前往系统设置"
+                secondaryActionTo="/settings"
+                className="border-0 bg-transparent px-0 py-4"
+              >
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 font-body-sm text-body-sm text-on-primary shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={handleStartSelection}
+                  disabled={simulating || persistingGeneratedData}
+                >
+                  <span className="material-symbols-outlined text-[18px]">crop_square</span>
+                  框选区域生成数据
+                </button>
+              </EmptyState>
+            ) : (
+              <>
+                <div className="flex flex-col items-center justify-center gap-3 text-center">
+                  <span className="material-symbols-outlined text-on-surface-variant text-[48px]">touch_app</span>
+                  <h3 className="font-headline-md text-headline-md text-on-surface-variant">点击地图标记查看故障详情</h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">
+                    有坐标的历史和AI入库故障会显示在地图上；缺少坐标的记录在下方列出。
+                  </p>
                 </div>
-                <span className="font-data-mono text-data-mono text-on-surface-variant">{unlocatedFaults.length}</span>
-              </div>
-              {unlocatedFaults.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {unlocatedFaults.slice(0, 8).map((fault) => (
-                    <button
-                      key={fault.fault_id}
-                      type="button"
-                      onClick={() => setSelectedFault(fault)}
-                      className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-left transition-colors hover:bg-surface-container-low"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate font-body-sm text-body-sm font-semibold text-on-surface">
-                          {fault.fault_type_cn ?? '未知故障'}
-                        </span>
-                        <span className={isAiFault(fault) ? 'text-primary' : 'text-on-surface-variant'}>
-                          <span className="material-symbols-outlined text-[16px]">
-                            {isAiFault(fault) ? 'psychology' : 'history'}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between gap-2 font-body-sm text-body-sm text-on-surface-variant">
-                        <span className="truncate">{fault.station_id ?? '未知基站'}</span>
-                        <span>{fault.fault_level ?? '未分级'}</span>
-                      </div>
-                    </button>
-                  ))}
-                  {unlocatedFaults.length > 8 && (
-                    <p className="text-center font-body-sm text-body-sm text-on-surface-variant">
-                      还有 {unlocatedFaults.length - 8} 条无坐标记录可在故障日志中查看。
+
+                <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">location_off</span>
+                      <h4 className="font-title-sm text-title-sm text-on-surface">无坐标故障</h4>
+                    </div>
+                    <span className="font-data-mono text-data-mono text-on-surface-variant">{unlocatedFaults.length}</span>
+                  </div>
+                  {unlocatedFaults.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {unlocatedFaults.slice(0, 8).map((fault) => (
+                        <button
+                          key={fault.fault_id}
+                          type="button"
+                          onClick={() => setSelectedFault(fault)}
+                          className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-left transition-colors hover:bg-surface-container-low"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate font-body-sm text-body-sm font-semibold text-on-surface">
+                              {fault.fault_type_cn ?? '未知故障'}
+                            </span>
+                            <span className={isAiFault(fault) ? 'text-primary' : 'text-on-surface-variant'}>
+                              <span className="material-symbols-outlined text-[16px]">
+                                {isAiFault(fault) ? 'psychology' : 'history'}
+                              </span>
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-2 font-body-sm text-body-sm text-on-surface-variant">
+                            <span className="truncate">{fault.station_id ?? '未知基站'}</span>
+                            <span>{fault.fault_level ?? '未分级'}</span>
+                          </div>
+                        </button>
+                      ))}
+                      {unlocatedFaults.length > 8 && (
+                        <p className="text-center font-body-sm text-body-sm text-on-surface-variant">
+                          还有 {unlocatedFaults.length - 8} 条无坐标记录可在故障日志中查看。
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="font-body-sm text-body-sm text-on-surface-variant">
+                      当前故障记录均带有可绘制坐标。
                     </p>
                   )}
                 </div>
-              ) : (
-                <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  当前故障记录均带有可绘制坐标。
-                </p>
-              )}
-            </div>
+              </>
+            )}
           </div>
         )}
       </aside>

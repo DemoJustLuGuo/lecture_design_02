@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { fetchStations } from '@/api/stations'
+import { EmptyState } from '@/components/EmptyState'
 import type { Station } from '@/types/api'
 import { StationStatus } from '@/types/enums'
 
@@ -169,15 +170,14 @@ export default function StationMgmt() {
             <option value="offline">Offline (离线)</option>
           </select>
 
-          <button
-            className="bg-surface-container-low text-on-surface-variant border border-outline-variant px-4 py-2 rounded-lg font-label-caps text-label-caps shadow-sm flex items-center gap-2 cursor-not-allowed"
-            type="button"
-            disabled
-            title="基站由模拟生成或外部导入产生，当前不支持手工新建。"
+          <Link
+            className="bg-primary text-on-primary border border-primary px-4 py-2 rounded-lg font-label-caps text-label-caps shadow-sm flex items-center gap-2 hover:bg-primary/90 transition-colors"
+            to="/settings"
+            title="基站由模拟生成或外部导入产生，请在系统设置中写入演示数据。"
           >
-            <span className="material-symbols-outlined text-[18px]">lock</span>
-            外部导入
-          </button>
+            <span className="material-symbols-outlined text-[18px]">upload_file</span>
+            导入数据
+          </Link>
         </div>
       </div>
 
@@ -236,8 +236,21 @@ export default function StationMgmt() {
               })}
               {pagedStations.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-body-sm font-body-sm text-on-surface-variant">
-                    当前筛选条件下没有基站记录。
+                  <td colSpan={7} className="px-6 py-8">
+                    {stations.length === 0 ? (
+                      <EmptyState
+                        icon="cell_tower"
+                        title="暂无基站工参数据"
+                        description="当前 SQLite 中没有基站记录。请先在系统设置中生成合成数据、导入外部 CSV，或从阶段数据刷新演示库。"
+                        actionLabel="前往系统设置"
+                        actionTo="/settings"
+                        className="border-0 bg-transparent py-4"
+                      />
+                    ) : (
+                      <div className="text-center text-body-sm font-body-sm text-on-surface-variant">
+                        当前筛选条件下没有基站记录。
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : null}
