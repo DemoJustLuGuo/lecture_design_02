@@ -30,6 +30,8 @@ frontend/
 React + Vite + Axios + ECharts + Leaflet + Tailwind CSS
 ```
 
+2026-06-18 更新：前端已清理 Vue 遗留产物，当前工程统一为 React 技术栈。旧 `.vue` 页面、Vue Router、Pinia store、Vue 示例资源已删除。
+
 当前路由已经覆盖源码级规范要求的页面：
 
 | 页面 | 路由 | 联调状态 |
@@ -42,6 +44,7 @@ React + Vite + Axios + ECharts + Leaflet + Tailwind CSS
 | 诊断建议 | `/diagnosis/:id` | 已联调 |
 | 模型评估 | `/metrics` | 已联调 |
 | 移动预警 | `/mobile-alert` | 已联调 |
+| 系统设置 | `/settings` | 已联调 |
 
 ## 3. API 对接情况
 
@@ -75,6 +78,9 @@ frontend/src/react/
 | 诊断建议 | `GET /api/diagnosis/{fault_id}` |
 | 模型评估 | `GET /api/model/evaluation` |
 | 移动预警 | `GET /api/faults`, `GET /api/faults/{fault_id}` |
+| 系统设置 | `POST /api/simulation/run`, `POST /api/simulation/generate`, `POST /api/simulation/import`, `POST /api/diagnosis/{fault_id}/enhance` |
+
+2026-06-18 更新：诊断页支持用户主动点击“AI增强诊断”，前端会读取设置页保存的大模型配置并调用增强诊断接口。设置页支持配置 OpenAI 兼容大模型 API，并提供演示数据刷新、合成数据生成和外部 CSV 导入入口。
 
 ## 4. 构建和后端测试
 
@@ -101,6 +107,16 @@ tsc -b && vite build
 4. 新增并验证规范路由 `/diagnosis/:id`，保留 `/faults/:id/diagnosis` 兼容入口。
 5. 修正诊断建议 API 调用路径为 `/api/diagnosis/{fault_id}`。
 6. 修正 ECharts 初始化时机，避免加载态切换后趋势图、饼图和定位误差图为空白。
+
+2026-06-18 P0 补充修复项：
+
+1. 诊断页“采纳建议”按钮已接入故障状态更新接口，可将未处理故障更新为“处理中”。
+2. 诊断页“导出报告”按钮已接入 Markdown 报告导出逻辑。
+3. 诊断详情新增处理状态展示，方便演示运维闭环。
+4. API 客户端错误提示增强，可区分后端未启动、代理失败、请求超时和网络异常。
+5. 新增 `scripts/start_backend.ps1`、`scripts/start_frontend.ps1` 和 `scripts/health_check.ps1`，降低演示启动和排错成本。
+6. 补充空库页面引导：总览、基站、故障日志、故障地图、诊断、模型评估和移动预警页面在无数据时提示前往设置页导入或生成数据。
+7. 调整后端 API 测试：依赖样本数据的测试改为自行插入最小样本并清理，避免测试依赖当前 `app.db` 已存在数据。
 
 在源码工程根目录执行后端测试：
 
@@ -216,3 +232,16 @@ TS_anomalous__synthetic__Zone_C__Twitch_00016
 | 检查页面在 1366x768 和移动宽度下的可读性 | 已完成 |
 | 将截图和演示路线同步到报告、PPT 和演示视频脚本 | 待阶段五推进 |
 | 若时间允许，再优化图表拆包和部分长诊断文本的展示格式 | 可选优化 |
+
+2026-06-18 最新待补项：
+
+| TODO | 状态 |
+| --- | --- |
+| 保存空白初始状态、设置页、AI 增强诊断、采纳建议和导出报告截图 | 待阶段五推进 |
+| 将大模型增强诊断流程写入报告“创新点”和“详细设计”章节 | 待阶段五推进 |
+| 将启动脚本和健康检查脚本整理到运行说明 | 已完成，见 `docs/run_and_demo_guide.md` |
+| 按实际 FastAPI 路由整理 API 文档表 | 已完成，见 `docs/api_reference.md` |
+| 设置页增加演示流程状态提示 | 已完成，可区分空库、预览待写入、故障分析、模型评估和 LLM 配置状态 |
+| 优化 Vite chunk size warning | 已完成，拆分 vendor chunk，并将 ECharts 改为按需注册 |
+| 完善外部 CSV 字段模板说明 | 已完成，见 `docs/data_import_template.md` 和 `frontend/public/templates/` |
+| 增加前端演示资产自动化校验 | 已完成，执行 `npm run validate:demo` |

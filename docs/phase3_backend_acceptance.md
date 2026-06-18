@@ -46,9 +46,9 @@ backend/data/app.db
 backend/src/database/schema.sql
 ```
 
-### 2.2 数据库写入结果
+### 2.2 阶段三数据库写入验收结果
 
-当前数据库统计结果：
+阶段三验收时的数据库统计结果：
 
 | 表名 | 行数 |
 | --- | ---: |
@@ -59,6 +59,18 @@ backend/src/database/schema.sql
 | `model_evaluations` | 2 |
 
 该数据规模能够支撑监控总览、故障日志、诊断建议、模型评估和后续地图展示。
+
+2026-06-18 更新：为演示“系统从空白状态导入/生成数据并完成分析”的流程，当前运行态 SQLite 文件 `backend/data/app.db` 已清空业务数据并保留表结构。当前空库行数为：
+
+| 表名 | 当前行数 |
+| --- | ---: |
+| `base_stations` | 0 |
+| `network_metrics` | 0 |
+| `fault_logs` | 0 |
+| `diagnosis_records` | 0 |
+| `model_evaluations` | 0 |
+
+阶段三写入结果仍作为后端验收记录保留；当前空库状态是演示运行态选择，不代表阶段二/阶段三数据产物丢失。可通过设置页或 `POST /api/simulation/run` 将阶段数据重新写入 SQLite。
 
 ## 3. 后端模块结构
 
@@ -95,11 +107,20 @@ backend/src/database/
 | `/api/metrics/realtime` | GET | 获取实时运行指标列表 |
 | `/api/faults` | GET | 获取故障日志列表 |
 | `/api/faults/{fault_id}` | GET | 获取单条故障详情 |
-| `/api/faults/detect` | POST | 返回异常检测模型可用状态 |
-| `/api/faults/classify` | POST | 返回故障分类模型可用状态 |
-| `/api/diagnosis/{fault_id}` | GET | 获取指定故障的诊断建议 |
+| `/api/faults/{fault_id}/status` | PATCH | 更新故障处理状态 |
+| `/api/faults/detect` | POST | 返回异常检测模型可用状态，可选写入故障日志 |
+| `/api/faults/classify` | POST | 返回故障分类模型可用状态，可选写入故障日志 |
+| `/api/diagnosis/{fault_id}` | GET | 获取指定故障的规则诊断建议 |
+| `/api/diagnosis/{fault_id}?enhance=llm` | GET | 使用后端环境变量尝试大模型增强诊断 |
+| `/api/diagnosis/{fault_id}/enhance` | POST | 使用前端传入配置触发大模型增强诊断 |
 | `/api/model/evaluation` | GET | 获取模型评估结果 |
-| `/api/simulation/run` | POST | 返回阶段二处理数据可用状态 |
+| `/api/simulation/run` | POST | 重新加载阶段二处理数据到 SQLite |
+| `/api/simulation/generate` | POST | 生成合成演示数据 |
+| `/api/simulation/generate-area` | POST | 按地图区域生成合成演示数据 |
+| `/api/simulation/commit-preview` | POST | 将预览数据写入 SQLite |
+| `/api/simulation/import` | POST | 导入外部 CSV 网络指标数据 |
+
+2026-06-18 更新：诊断接口已经扩展为规则诊断和可选大模型增强诊断两种模式。大模型增强失败时返回规则诊断结果，并在 `display.llm_error` 中保留失败原因，保证演示流程稳定。
 
 接口统一返回结构：
 
@@ -139,6 +160,8 @@ backend/src/database/
 | `POST /api/simulation/run` | 200 | `success: true` |
 | `GET /api/faults/{fault_id}` | 200 | `success: true` |
 | `GET /api/diagnosis/{fault_id}` | 200 | `success: true` |
+| `PATCH /api/faults/{fault_id}/status` | 200 | `success: true` |
+| `POST /api/diagnosis/{fault_id}/enhance` | 200 | mock 环境下 `success: true` |
 
 示例故障编号：
 

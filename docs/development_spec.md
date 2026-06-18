@@ -188,7 +188,7 @@ feature_pipeline.joblib
 
 位置：`backend/src/diagnosis/`
 
-诊断建议采用规则引擎实现。输入故障类型、置信度、关键指标和定位信息，输出：
+诊断建议采用规则引擎作为稳定兜底。输入故障类型、置信度、关键指标和定位信息，输出：
 
 1. 故障原因分析。
 2. 推荐处理动作。
@@ -203,6 +203,17 @@ feature_pipeline.joblib
 | 误码过高 | 排查同频干扰，调整频点或发射功率 |
 | 带宽不足 | 分析高峰时段流量，考虑扩容或限流 |
 | 基站故障 | 检查设备温度、CPU负载和告警状态 |
+
+当前实现支持可选大模型增强诊断。大模型 API 采用 OpenAI 兼容接口，只作为诊断建议增强层，不替代异常检测、故障分类、定位计算和规则库。配置来源包括后端环境变量和前端设置页传入配置；未配置 API key 或调用失败时必须回退规则诊断。
+
+大模型输入和输出均应保持结构化 JSON。输出字段包括：
+
+1. `root_cause`
+2. `key_symptoms`
+3. `suggested_actions`
+4. `affected_scope`
+5. `review_required`
+6. `review_reason`
 
 ### 4.5 数据库模块
 
@@ -232,11 +243,18 @@ feature_pipeline.joblib
 | `/api/metrics/realtime` | GET | 获取实时运行指标 |
 | `/api/faults` | GET | 查询故障日志 |
 | `/api/faults/{fault_id}` | GET | 查看故障详情 |
+| `/api/faults/{fault_id}/status` | PATCH | 更新故障处理状态 |
 | `/api/faults/detect` | POST | 执行异常检测 |
 | `/api/faults/classify` | POST | 执行故障分类 |
 | `/api/diagnosis/{fault_id}` | GET | 获取诊断建议 |
+| `/api/diagnosis/{fault_id}?enhance=llm` | GET | 使用后端环境变量尝试大模型增强诊断 |
+| `/api/diagnosis/{fault_id}/enhance` | POST | 使用前端设置页配置触发大模型增强诊断 |
 | `/api/model/evaluation` | GET | 获取模型评估结果 |
 | `/api/simulation/run` | POST | 触发模拟数据生成 |
+| `/api/simulation/generate` | POST | 生成合成演示数据 |
+| `/api/simulation/generate-area` | POST | 按地图区域生成合成演示数据 |
+| `/api/simulation/commit-preview` | POST | 将预览数据写入 SQLite |
+| `/api/simulation/import` | POST | 导入外部 CSV 网络指标数据 |
 
 统一响应结构：
 
