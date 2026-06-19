@@ -18,14 +18,14 @@ const statusColorMap: Record<string, string> = {
 }
 
 const severityOfFault: Record<string, string> = {
-  [FaultLevel.Critical]: 'Critical',
-  [FaultLevel.Warning]: 'Warning',
-  [FaultLevel.Info]: 'Info',
-  '严重': 'Critical',
-  '预警': 'Warning',
-  '警告': 'Warning',
-  '一般': 'Info',
-  '提示': 'Info',
+  [FaultLevel.Critical]: '严重',
+  [FaultLevel.Warning]: '预警',
+  [FaultLevel.Info]: '一般',
+  '严重': '严重',
+  '预警': '预警',
+  '警告': '预警',
+  '一般': '一般',
+  '提示': '一般',
 }
 
 function faultTypeIcon(type: string | null): string {
@@ -155,6 +155,10 @@ const LEAFLET_CSS = `
 .leaflet-top .leaflet-control { margin-top: 92px !important; }
 .leaflet-control-zoom a { background: #f8f9ff !important; color: #0b1c30 !important; border: 1px solid #c7c4d7 !important; border-radius: 8px !important; }
 .leaflet-control-zoom a:hover { background: #eff4ff !important; }
+@media (max-width: 767px) {
+  .leaflet-left .leaflet-control { margin-left: 12px !important; }
+  .leaflet-top .leaflet-control { margin-top: 104px !important; }
+}
 .pulse-ring-marker {
   position: relative;
 }
@@ -494,8 +498,8 @@ export default function FaultMap() {
         const icon = L.divIcon({
           className: '',
           html: `<div class="station-marker-icon" style="width:${size}px;height:${size}px;background:${color};opacity:${isOffline ? 0.6 : 1};">
-            ${station.status === StationStatus.Warning ? '<span class="material-symbols-outlined" style="color:white;font-size:12px;">warning</span>' : ''}
-            ${station.status === StationStatus.Severe ? '<span class="material-symbols-outlined" style="color:white;font-size:14px;">error</span>' : ''}
+            ${station.status === StationStatus.Warning ? '<span aria-hidden="true" class="material-symbols-outlined" style="color:white;font-size:12px;">warning</span>' : ''}
+            ${station.status === StationStatus.Severe ? '<span aria-hidden="true" class="material-symbols-outlined" style="color:white;font-size:14px;">error</span>' : ''}
           </div>`,
           iconSize: [size, size],
           iconAnchor: [size / 2, size / 2],
@@ -518,7 +522,7 @@ export default function FaultMap() {
         const markerHtml = `
           <div class="${config.pulse ? 'pulse-ring-marker' : ''}">
             <div class="fault-marker-icon" style="width:24px;height:24px;background:${config.color};">
-              <span class="material-symbols-outlined" style="color:white;font-size:14px;">${config.icon}</span>
+              <span aria-hidden="true" class="material-symbols-outlined" style="color:white;font-size:14px;">${config.icon}</span>
             </div>
           </div>`
         const icon = L.divIcon({
@@ -586,7 +590,7 @@ export default function FaultMap() {
       {/* ── Top Status Bar ─────────────────────────────────── */}
       <div
         data-testid="map-status-bar"
-        className="pointer-events-none absolute left-4 right-4 top-4 z-20 flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-2 md:left-20 xl:right-[360px]"
+        className="pointer-events-none absolute left-3 right-3 top-3 z-20 flex max-w-[calc(100vw-1.5rem)] flex-nowrap items-center gap-2 overflow-x-auto pb-1 md:left-20 md:right-4 md:top-4 md:max-w-[calc(100vw-2rem)] md:flex-wrap md:overflow-visible md:pb-0 xl:right-[360px]"
       >
         {[
           { icon: 'wifi', label: '基站', value: totalStations, color: 'text-emerald-600' },
@@ -598,9 +602,9 @@ export default function FaultMap() {
         ].map((item) => (
           <div
             key={item.label}
-            className="pointer-events-auto flex min-w-[112px] max-w-[160px] items-center gap-2 rounded-lg border border-outline-variant bg-surface/95 px-3 py-2 shadow-sm backdrop-blur"
+            className="pointer-events-auto flex min-w-[100px] max-w-[150px] shrink-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface/95 px-3 py-2 shadow-sm backdrop-blur md:min-w-[112px]"
           >
-            <span className={`material-symbols-outlined icon-fill text-[18px] ${item.color}`}>{item.icon}</span>
+            <span aria-hidden="true" className={`material-symbols-outlined icon-fill text-[18px] ${item.color}`}>{item.icon}</span>
             <div className="min-w-0">
               <div className="font-label-caps text-[10px] uppercase leading-4 text-on-surface-variant">{item.label}</div>
               <div className="truncate font-data-mono text-data-mono font-bold leading-5 text-on-surface" title={String(item.value)}>
@@ -614,11 +618,11 @@ export default function FaultMap() {
       {/* ── Area Simulation Controls ─────────────────────────── */}
       <div
         data-testid="map-simulation-panel"
-        className="absolute bottom-6 left-4 z-20 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-outline-variant bg-surface/95 shadow-lg backdrop-blur md:left-6"
+        className="absolute bottom-20 left-3 right-3 z-20 overflow-hidden rounded-xl border border-outline-variant bg-surface/95 shadow-lg backdrop-blur md:bottom-6 md:left-6 md:right-auto md:w-[min(420px,calc(100vw-2rem))]"
       >
         <div className="flex items-center justify-between gap-3 border-b border-outline-variant bg-surface-container-lowest px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[20px]">draw</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-primary text-[20px]">draw</span>
             <div className="min-w-0">
               <h2 className="truncate font-headline-md text-[16px] leading-tight text-on-surface">区域数据模拟</h2>
               <p className="font-body-sm text-body-sm text-on-surface-variant">先生成预览，再确认写入 SQLite</p>
@@ -631,11 +635,25 @@ export default function FaultMap() {
             disabled={simulating || persistingGeneratedData}
             title="清除选择"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
-        <div className="flex max-h-[58vh] flex-col gap-3 overflow-y-auto p-4">
+        <div className="flex max-h-[42dvh] flex-col gap-3 overflow-y-auto p-4 md:max-h-[58vh]">
+          {isEmptyDatabase ? (
+            <div className="rounded-lg border border-primary/25 bg-primary-container/40 px-3 py-2 text-body-sm font-body-sm text-on-primary-container md:hidden">
+              当前演示库为空。可在地图上框选区域生成数据，或进入系统设置导入标准 CSV。
+              <button
+                type="button"
+                className="mt-2 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-primary/30 bg-surface px-3 py-1.5 text-body-sm font-body-sm text-primary"
+                onClick={() => navigate('/settings')}
+              >
+                <span aria-hidden="true" className="material-symbols-outlined text-[16px]">settings</span>
+                系统设置
+              </button>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -649,7 +667,7 @@ export default function FaultMap() {
               disabled={simulating || persistingGeneratedData}
               title="在地图上选择区域"
             >
-              <span className="material-symbols-outlined text-[18px]">{selectionActive ? 'my_location' : 'crop_square'}</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">{selectionActive ? 'my_location' : 'crop_square'}</span>
               {selectionActive ? '选取中' : '框选区域'}
             </button>
             <button
@@ -659,7 +677,7 @@ export default function FaultMap() {
               disabled={!selectedBounds || simulating || persistingGeneratedData}
               title="生成区域模拟数据预览"
             >
-              <span className={`material-symbols-outlined text-[18px] ${simulating ? 'animate-spin-slow' : ''}`}>
+              <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${simulating ? 'animate-spin-slow' : ''}`}>
                 {simulating ? 'progress_activity' : 'preview'}
               </span>
               {simulating ? '生成中' : '生成预览'}
@@ -668,7 +686,7 @@ export default function FaultMap() {
 
           <div className="grid grid-cols-3 gap-2">
             <label className="flex flex-col gap-1">
-              <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Stations</span>
+              <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">基站数</span>
               <input
                 type="number"
                 min={3}
@@ -680,7 +698,7 @@ export default function FaultMap() {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Metrics</span>
+              <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">指标数</span>
               <input
                 type="number"
                 min={1}
@@ -693,7 +711,7 @@ export default function FaultMap() {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Fault</span>
+              <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">故障比</span>
               <input
                 type="number"
                 min={0}
@@ -720,8 +738,8 @@ export default function FaultMap() {
 
           <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3">
             <div className="mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-on-surface-variant text-[16px]">select_all</span>
-              <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Bounds</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant text-[16px]">select_all</span>
+              <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">区域范围</span>
             </div>
             {selectedBounds ? (
               <div className="grid grid-cols-2 gap-x-3 gap-y-1 font-data-mono text-[11px] leading-5 text-on-surface">
@@ -761,15 +779,15 @@ export default function FaultMap() {
 
       {/* ── Bottom Legend Overlay ───────────────────────── */}
       <div className="absolute bottom-6 right-[360px] z-20 hidden rounded-xl border border-outline-variant bg-surface/95 p-4 shadow-lg backdrop-blur xl:block">
-        <h4 className="font-label-caps text-label-caps text-on-surface-variant mb-3 uppercase tracking-wider">Station Status</h4>
+        <h4 className="font-label-caps text-label-caps text-on-surface-variant mb-3 uppercase tracking-wider">状态图例</h4>
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-[#22c55e]" />
-            <span className="font-body-sm text-body-sm text-on-surface">正常 (Normal)</span>
+            <span className="font-body-sm text-body-sm text-on-surface">正常</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-[#eab308]" />
-            <span className="font-body-sm text-body-sm text-on-surface">警告 (Warning)</span>
+            <span className="font-body-sm text-body-sm text-on-surface">预警</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-error" />
@@ -793,7 +811,7 @@ export default function FaultMap() {
       {/* ── Right Info Panel ─────────────────────────────────── */}
       <aside
         data-testid="map-info-panel"
-        className="absolute bottom-6 right-4 top-20 z-20 flex w-[min(320px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface/95 shadow-lg backdrop-blur animate-fade-in md:right-6"
+        className="absolute bottom-6 right-4 top-20 z-20 hidden w-[min(320px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface/95 shadow-lg backdrop-blur animate-fade-in md:right-6 md:flex"
       >
         {selectedFault ? (
           <>
@@ -801,7 +819,7 @@ export default function FaultMap() {
             <div className="px-5 py-4 border-b border-outline-variant bg-surface-container-lowest flex items-center justify-between">
               <h2 className="font-headline-md text-headline-md text-on-surface">当前选中故障</h2>
               <span className="px-2 py-0.5 bg-error-container text-on-error-container font-label-caps text-[10px] rounded uppercase">
-                {severityOfFault[selectedFault.fault_level ?? ''] ?? 'Info'}
+                {severityOfFault[selectedFault.fault_level ?? ''] ?? '一般'}
               </span>
             </div>
 
@@ -809,9 +827,9 @@ export default function FaultMap() {
             <div className="p-5 flex flex-col gap-5 border-b border-outline-variant">
               {/* Type */}
               <div className="flex flex-col gap-1">
-                <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Type</span>
+                <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">故障类型</span>
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-error">{faultTypeIcon(selectedFault.fault_type_cn)}</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-error">{faultTypeIcon(selectedFault.fault_type_cn)}</span>
                   <span className="font-body-base text-body-base font-semibold text-on-surface">
                     {selectedFault.fault_type_cn || '未知故障'}
                   </span>
@@ -819,7 +837,7 @@ export default function FaultMap() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Source</span>
+                <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">来源</span>
                 <span
                   className={[
                     'inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold border',
@@ -828,7 +846,7 @@ export default function FaultMap() {
                       : 'bg-surface-container text-on-surface-variant border-outline-variant',
                   ].join(' ')}
                 >
-                  <span className="material-symbols-outlined text-[14px]">
+                  <span aria-hidden="true" className="material-symbols-outlined text-[14px]">
                     {isAiFault(selectedFault) ? 'psychology' : 'history'}
                   </span>
                   {faultSourceLabel(selectedFault)}
@@ -837,14 +855,14 @@ export default function FaultMap() {
 
               {/* Station */}
               <div className="flex flex-col gap-1">
-                <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Station</span>
+                <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">基站</span>
                 <span className="font-data-mono text-data-mono text-on-surface">
                   {selectedFault.station_id || 'Unknown'}
                 </span>
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Coordinate</span>
+                <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">坐标</span>
                 <span className={hasFaultCoordinates(selectedFault) ? 'font-data-mono text-data-mono text-on-surface' : 'font-body-sm text-body-sm text-on-surface-variant'}>
                   {formatFaultCoordinate(selectedFault)}
                 </span>
@@ -858,13 +876,13 @@ export default function FaultMap() {
               {/* Metric boxes */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/50">
-                  <span className="font-label-caps text-[10px] text-on-surface-variant uppercase">AI Confidence</span>
+                  <span className="font-label-caps text-[10px] text-on-surface-variant uppercase">AI 置信度</span>
                   <span className="font-data-mono text-[18px] leading-tight font-bold text-error animate-count-up delay-100">
                     {selectedConfidence}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/50">
-                  <span className="font-label-caps text-[10px] text-on-surface-variant uppercase">Error Range</span>
+                  <span className="font-label-caps text-[10px] text-on-surface-variant uppercase">定位误差</span>
                   <span className="font-data-mono text-[18px] leading-tight font-bold text-on-surface animate-count-up delay-200">
                     {selectedErrorRange}
                   </span>
@@ -878,7 +896,7 @@ export default function FaultMap() {
                   type="button"
                   onClick={() => navigate(`/faults/${selectedFault.fault_id}/diagnosis`)}
                 >
-                  <span className="material-symbols-outlined text-[18px]">build</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">build</span>
                   查看诊断建议
                 </button>
                 <button
@@ -887,7 +905,7 @@ export default function FaultMap() {
                   onClick={() => navigate(`/stations/${selectedFault.station_id}`)}
                   disabled={!selectedFault.station_id}
                 >
-                  <span className="material-symbols-outlined text-[18px]">router</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">router</span>
                   查看基站详情
                 </button>
               </div>
@@ -938,14 +956,14 @@ export default function FaultMap() {
                   onClick={handleStartSelection}
                   disabled={simulating || persistingGeneratedData}
                 >
-                  <span className="material-symbols-outlined text-[18px]">crop_square</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">crop_square</span>
                   框选区域生成数据
                 </button>
               </EmptyState>
             ) : (
               <>
                 <div className="flex flex-col items-center justify-center gap-3 text-center">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[48px]">touch_app</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant text-[48px]">touch_app</span>
                   <h3 className="font-headline-md text-headline-md text-on-surface-variant">点击地图标记查看故障详情</h3>
                   <p className="font-body-sm text-body-sm text-on-surface-variant">
                     有坐标的历史和AI入库故障会显示在地图上；缺少坐标的记录在下方列出。
@@ -955,7 +973,7 @@ export default function FaultMap() {
                 <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">location_off</span>
+                      <span aria-hidden="true" className="material-symbols-outlined text-on-surface-variant text-[18px]">location_off</span>
                       <h4 className="font-title-sm text-title-sm text-on-surface">无坐标故障</h4>
                     </div>
                     <span className="font-data-mono text-data-mono text-on-surface-variant">{unlocatedFaults.length}</span>
@@ -974,7 +992,7 @@ export default function FaultMap() {
                               {fault.fault_type_cn ?? '未知故障'}
                             </span>
                             <span className={isAiFault(fault) ? 'text-primary' : 'text-on-surface-variant'}>
-                              <span className="material-symbols-outlined text-[16px]">
+                              <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
                                 {isAiFault(fault) ? 'psychology' : 'history'}
                               </span>
                             </span>
@@ -1022,7 +1040,7 @@ export default function FaultMap() {
                 onClick={handleDiscardGeneratedData}
                 disabled={persistingGeneratedData}
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
@@ -1092,7 +1110,7 @@ export default function FaultMap() {
                 onClick={handlePersistGeneratedData}
                 disabled={persistingGeneratedData}
               >
-                <span className={`material-symbols-outlined text-[18px] ${persistingGeneratedData ? 'animate-spin-slow' : ''}`}>
+                <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${persistingGeneratedData ? 'animate-spin-slow' : ''}`}>
                   {persistingGeneratedData ? 'progress_activity' : 'database'}
                 </span>
                 {persistingGeneratedData ? '写入中' : '写入 SQLite 并刷新地图'}
