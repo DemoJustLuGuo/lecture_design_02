@@ -30,6 +30,7 @@ export default function MobileNav() {
                 }`}
               >
                 <span
+                  aria-hidden="true"
                   className="material-symbols-outlined text-[20px]"
                   style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                 >

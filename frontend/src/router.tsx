@@ -21,7 +21,7 @@ function PageLoader() {
   return (
     <div className="flex items-center justify-center h-full w-full animate-fade-in">
       <div className="flex flex-col items-center gap-4">
-        <span className="material-symbols-outlined lg animate-spin-slow text-primary">
+        <span aria-hidden="true" className="material-symbols-outlined lg animate-spin-slow text-primary">
           progress_activity
         </span>
         <p className="text-on-surface-variant font-label-caps text-label-caps">加载中...</p>

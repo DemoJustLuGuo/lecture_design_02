@@ -18,7 +18,7 @@ export function ChartPanel({ title, className = '', children }: ChartPanelProps)
           aria-hidden="true"
           className="flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
         >
-          <span className="material-symbols-outlined text-[20px]">more_horiz</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[20px]">more_horiz</span>
         </span>
       </div>
 

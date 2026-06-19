@@ -231,7 +231,7 @@ export default function Diagnosis() {
     return (
       <div className="max-w-[1200px] mx-auto flex flex-col gap-gutter animate-fade-in">
         <div className="flex items-center justify-center h-[400px] text-on-surface-variant font-body-md">
-          <span className="material-symbols-outlined animate-pulse-scale mr-2">progress_activity</span>
+          <span aria-hidden="true" className="material-symbols-outlined animate-pulse-scale mr-2">progress_activity</span>
           加载诊断数据...
         </div>
       </div>
@@ -287,7 +287,7 @@ export default function Diagnosis() {
             onClick={handleEnhanceDiagnosis}
             disabled={enhancing}
           >
-            <span className={`material-symbols-outlined text-[18px] ${enhancing ? 'animate-spin-slow' : ''}`}>
+            <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${enhancing ? 'animate-spin-slow' : ''}`}>
               {enhancing ? 'progress_activity' : 'auto_awesome'}
             </span>
             {enhancing ? '增强中' : 'AI增强诊断'}
@@ -297,7 +297,7 @@ export default function Diagnosis() {
             type="button"
             onClick={handleExportReport}
           >
-            <span className="material-symbols-outlined text-[18px]">download</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">download</span>
             导出报告
           </button>
           <button
@@ -306,7 +306,7 @@ export default function Diagnosis() {
             onClick={handleAcceptSuggestion}
             disabled={accepting || !canAccept}
           >
-            <span className={`material-symbols-outlined text-[18px] ${accepting ? 'animate-spin-slow' : ''}`}>
+            <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${accepting ? 'animate-spin-slow' : ''}`}>
               {accepting ? 'progress_activity' : 'done_all'}
             </span>
             {accepting ? '提交中' : canAccept ? '采纳建议' : '已采纳'}
@@ -322,7 +322,7 @@ export default function Diagnosis() {
             : 'bg-surface-container-low border-outline-variant text-on-surface-variant',
         ].join(' ')}
         >
-          <span className="material-symbols-outlined text-[18px]">
+          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
             {data?.display?.llm_enhanced ? 'auto_awesome' : 'info'}
           </span>
           <span>{notice}</span>
@@ -337,7 +337,7 @@ export default function Diagnosis() {
         {/* Header: icon + title + badges */}
         <div className="flex items-center justify-between border-b border-outline-variant/50 pb-4">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-error text-[28px]">gpp_bad</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-error text-[28px]">gpp_bad</span>
             <h3 className="font-headline-md text-headline-md text-on-surface">
               {fault.fault_type_cn ?? '未知故障'}
             </h3>
@@ -348,12 +348,12 @@ export default function Diagnosis() {
               {fault.fault_level ?? '未分级'}
             </span>
             <span className="px-2.5 py-1 rounded-full bg-primary-container text-primary font-label-caps text-label-caps border border-primary/20 flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">psychology</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[14px]">psychology</span>
               {confidence == null ? display.source_label : `模型置信度 ${confidence.toFixed(1)}%`}
             </span>
             {display.llm_enhanced ? (
               <span className="px-2.5 py-1 rounded-full bg-tertiary-container text-on-tertiary-container font-label-caps text-label-caps border border-tertiary/20 flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[14px]">auto_awesome</span>
                 {display.llm_model ?? 'LLM'}
               </span>
             ) : null}
@@ -391,14 +391,14 @@ export default function Diagnosis() {
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-[20px]">troubleshoot</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">troubleshoot</span>
             </div>
             <h3 className="font-headline-md text-headline-md text-on-surface">原因分析</h3>
           </div>
           <div className="prose prose-sm max-w-none text-on-surface-variant font-body-md leading-relaxed space-y-4">
             <p>{display.root_cause}</p>
             <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/30 flex items-start gap-3 mt-4">
-              <span className="material-symbols-outlined text-secondary text-[20px] mt-0.5">info</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-secondary text-[20px] mt-0.5">info</span>
               <div className="font-body-sm">
                 <span className="block font-medium text-on-surface mb-1">关键症状</span>
                 <ul className="list-disc pl-4 space-y-1">
@@ -410,7 +410,7 @@ export default function Diagnosis() {
             </div>
             {display.evidence.length > 0 && (
               <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/30 flex items-start gap-3">
-                <span className="material-symbols-outlined text-secondary text-[20px] mt-0.5">fact_check</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-secondary text-[20px] mt-0.5">fact_check</span>
                 <div className="font-body-sm">
                   <span className="block font-medium text-on-surface mb-1">诊断依据</span>
                   <ul className="list-disc pl-4 space-y-1">
@@ -428,7 +428,7 @@ export default function Diagnosis() {
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col gap-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-[20px]">build_circle</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">build_circle</span>
             </div>
             <h3 className="font-headline-md text-headline-md text-on-surface">处理建议</h3>
           </div>
@@ -460,7 +460,7 @@ export default function Diagnosis() {
       <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col md:flex-row gap-6 items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-3">
-            <span className="material-symbols-outlined text-secondary text-[20px]">radar</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-secondary text-[20px]">radar</span>
             <h3 className="font-headline-md text-headline-md text-on-surface">影响范围</h3>
           </div>
           <p className="font-body-md text-on-surface-variant leading-relaxed">
@@ -470,13 +470,13 @@ export default function Diagnosis() {
 
         {reviewRequired ? (
           <div className="flex-shrink-0 bg-error-container/40 border border-error/30 rounded-xl p-4 flex flex-col items-center justify-center text-center w-full md:w-auto max-w-[280px] animate-border-flash">
-            <span className="material-symbols-outlined text-error text-[32px] mb-2">engineering</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-error text-[32px] mb-2">engineering</span>
             <span className="font-headline-md text-headline-md text-error mb-1 tracking-tight">需人工复核</span>
             <span className="font-body-sm text-on-error-container">{display.review_reason}</span>
           </div>
         ) : (
           <div className="flex-shrink-0 bg-surface-container-low border border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center text-center w-full md:w-auto max-w-[280px]">
-            <span className="material-symbols-outlined text-primary text-[32px] mb-2">task_alt</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-primary text-[32px] mb-2">task_alt</span>
             <span className="font-headline-md text-headline-md text-primary mb-1 tracking-tight">自动诊断完成</span>
             <span className="font-body-sm text-on-surface-variant">{display.review_reason}</span>
           </div>

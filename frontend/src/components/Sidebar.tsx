@@ -17,7 +17,7 @@ export default function Sidebar() {
       <div className="mb-8 px-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-container">
-            <span className="material-symbols-outlined text-on-primary-container text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-on-primary-container text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               hub
             </span>
           </div>
@@ -53,6 +53,7 @@ export default function Sidebar() {
             {({ isActive }) => (
               <>
                 <span
+                  aria-hidden="true"
                   className="material-symbols-outlined text-[20px] leading-none"
                   style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                 >
@@ -72,7 +73,7 @@ export default function Sidebar() {
           className="mx-2 my-1 flex w-[calc(100%-1rem)] items-center gap-3 rounded-lg px-4 py-3 text-left text-[13px] font-medium tracking-wide text-surface-variant transition-colors hover:bg-surface-container-highest/10 hover:text-white"
           title="演示顺序：总览、故障日志、地图、诊断建议、模型评估。"
         >
-          <span className="material-symbols-outlined text-[20px] leading-none" style={{ fontVariationSettings: "'FILL' 0" }}>
+          <span aria-hidden="true" className="material-symbols-outlined text-[20px] leading-none" style={{ fontVariationSettings: "'FILL' 0" }}>
             help
           </span>
           <span>帮助支持</span>
@@ -83,7 +84,7 @@ export default function Sidebar() {
           disabled
           title="本课程设计演示版未接入登录会话。"
         >
-          <span className="material-symbols-outlined text-[20px] leading-none" style={{ fontVariationSettings: "'FILL' 0" }}>
+          <span aria-hidden="true" className="material-symbols-outlined text-[20px] leading-none" style={{ fontVariationSettings: "'FILL' 0" }}>
             logout
           </span>
           <span>退出系统</span>

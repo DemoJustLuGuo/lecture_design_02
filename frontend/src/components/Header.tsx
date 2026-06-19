@@ -40,7 +40,7 @@ export default function Header() {
 
         {/* Search bar – hidden on mobile, visible from sm */}
         <form className="relative hidden w-96 sm:block" onSubmit={submitSearch}>
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">
+          <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">
             search
           </span>
           <input
@@ -68,7 +68,7 @@ export default function Header() {
           className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container"
           onClick={() => navigate('/mobile-alert')}
         >
-          <span className="material-symbols-outlined text-[20px]">notifications</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[20px]">notifications</span>
           <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-error animate-pulse-scale border border-surface" />
         </button>
 
@@ -79,7 +79,7 @@ export default function Header() {
           className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container"
           onClick={() => navigate('/settings')}
         >
-          <span className="material-symbols-outlined text-[20px]">settings</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[20px]">settings</span>
         </button>
 
         {/* Help – hidden on mobile */}
@@ -89,7 +89,7 @@ export default function Header() {
           className="hidden h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container sm:flex"
           onClick={() => showMessage('帮助：按总览 -> 故障日志 -> 地图 -> 诊断建议顺序演示主流程。')}
         >
-          <span className="material-symbols-outlined text-[20px]">help</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[20px]">help</span>
         </button>
 
         {/* Divider */}
@@ -97,7 +97,7 @@ export default function Header() {
 
         {/* User avatar */}
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-container-dark text-on-primary-container-dark font-label-md">
-          <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
         </div>
       </div>
 
@@ -108,7 +108,7 @@ export default function Header() {
         className="ml-2 flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container md:hidden"
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
       >
-        <span className="material-symbols-outlined text-[22px]">
+        <span aria-hidden="true" className="material-symbols-outlined text-[22px]">
           {mobileMenuOpen ? 'close' : 'menu'}
         </span>
       </button>
@@ -128,7 +128,7 @@ export default function Header() {
                 ].join(' ')
               }
             >
-              <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">{item.icon}</span>
               <span>{item.label}</span>
             </NavLink>
           ))}

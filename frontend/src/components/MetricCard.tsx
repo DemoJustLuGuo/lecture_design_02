@@ -47,6 +47,7 @@ export function MetricCard({
           {label}
         </span>
         <span
+          aria-hidden="true"
           className={`material-symbols-outlined icon-fill text-[20px] ${iconColor}`}
           style={{ fontVariationSettings: "'FILL' 1" }}
         >
@@ -61,7 +62,7 @@ export function MetricCard({
         </span>
         {trend && (
           <span className={`font-data-mono flex items-center gap-1 text-[13px] leading-none ${trendColor}`}>
-            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               {trendIcon}
             </span>
             {trend.value}

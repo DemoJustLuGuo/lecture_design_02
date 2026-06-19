@@ -108,7 +108,7 @@ export default function MobileAlert() {
       <div className="bg-surface-variant min-h-screen flex items-center justify-center p-8">
         <div className="w-full max-w-[480px] h-[850px] bg-background rounded-[40px] device-shadow relative overflow-hidden border-8 border-inverse-surface flex flex-col">
           <div className="flex-1 flex items-center justify-center text-on-surface-variant font-body-md">
-            <span className="material-symbols-outlined animate-pulse-scale mr-2">progress_activity</span>
+            <span aria-hidden="true" className="material-symbols-outlined animate-pulse-scale mr-2">progress_activity</span>
             加载告警数据...
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function MobileAlert() {
       <div className="bg-surface-variant min-h-screen flex items-center justify-center p-8">
         <div className="w-full max-w-[480px] h-[850px] bg-background rounded-[40px] device-shadow relative overflow-hidden border-8 border-inverse-surface flex flex-col">
           <div className="flex-1 flex items-center justify-center text-error font-body-md">
-            <span className="material-symbols-outlined mr-2">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined mr-2">error</span>
             {error}
           </div>
         </div>
@@ -139,28 +139,30 @@ export default function MobileAlert() {
           {/* Notch */}
           <div className="w-32 h-6 bg-inverse-surface absolute top-0 left-1/2 transform -translate-x-1/2 rounded-b-xl" />
           <div className="flex gap-1.5 items-center">
-            <span className="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
-            <span className="material-symbols-outlined text-[14px]">wifi</span>
-            <span className="material-symbols-outlined text-[14px]">battery_full</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[14px]">wifi</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[14px]">battery_full</span>
           </div>
         </div>
 
         {/* ── Phone Header ───────────────────────────────── */}
         <header className="flex items-center justify-between px-4 h-[56px] bg-surface border-b border-outline-variant shrink-0 z-10 relative">
           <button
+            aria-label="返回上一页"
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors"
             onClick={() => navigate(-1)}
           >
-            <span className="material-symbols-outlined text-on-surface">arrow_back</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-on-surface">arrow_back</span>
           </button>
           <h1 className="font-headline-md text-headline-md text-on-surface">移动告警预警</h1>
           <button
             type="button"
+            aria-label="查看完整故障日志"
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors relative"
             onClick={() => navigate('/faults')}
             title="查看完整故障日志"
           >
-            <span className="material-symbols-outlined text-on-surface">filter_list</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-on-surface">filter_list</span>
             {/* Red dot on filter */}
             {faults.length > 0 && (
               <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border border-surface" />
@@ -236,7 +238,7 @@ export default function MobileAlert() {
                   <div className="flex justify-between items-start mb-3 pl-2">
                     <div className="flex gap-3">
                       <div className={`w-10 h-10 rounded-full ${config.iconBg} flex items-center justify-center shrink-0`}>
-                        <span className={`material-symbols-outlined ${config.iconColor}`}>{icon}</span>
+                        <span aria-hidden="true" className={`material-symbols-outlined ${config.iconColor}`}>{icon}</span>
                       </div>
                       <div>
                         <h4 className="font-headline-md text-headline-md text-on-surface text-[16px]">{fault.fault_type_cn ?? '未知故障'}</h4>

@@ -33,7 +33,7 @@ export function BreadcrumbNav({ items }: BreadcrumbNavProps) {
 
             {/* Separator icon */}
             {!isLast && (
-              <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
+              <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-on-surface-variant">
                 chevron_right
               </span>
             )}
