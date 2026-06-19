@@ -5,8 +5,8 @@ from fastapi import APIRouter, HTTPException, Query
 
 from backend.src.api.routes.common import not_found, success
 from backend.src.database.repository import Repository
-from backend.src.models.inference import classify_faults as run_fault_classification
-from backend.src.models.inference import detect_anomalies
+from backend.src.models.anomaly_detector import detect_anomalies
+from backend.src.models.fault_classifier import classify_faults as run_fault_classification
 
 
 router = APIRouter(tags=["faults"])

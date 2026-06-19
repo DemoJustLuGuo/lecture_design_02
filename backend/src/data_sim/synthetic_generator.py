@@ -15,7 +15,13 @@ from backend.src.data_ingestion.build_phase2_dataset import (
     FAULT_SAMPLES_COLUMNS,
     LOCATION_COLUMNS,
     NETWORK_METRICS_COLUMNS,
-ROOT_CAUSE_COLUMNS,
+    ROOT_CAUSE_COLUMNS,
+)
+from backend.src.models.locator import (
+    anchor_reliability_weight,
+    distance_m,
+    nearest_stations,
+    weighted_least_squares_trilateration,
 )
 
 
@@ -90,15 +96,6 @@ def fmt(value: float | int | str | None) -> str:
 
 def clamp(value: float, min_value: float, max_value: float) -> float:
     return max(min_value, min(max_value, value))
-
-
-def distance_m(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
-    radius = 6_371_000.0
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp = math.radians(lat2 - lat1)
-    dl = math.radians(lon2 - lon1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * radius * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def write_csv(path: Path, columns: list[str], rows: list[dict[str, Any]]) -> None:
@@ -187,92 +184,6 @@ def apply_fault_metrics(
     )
 
 
-def lonlat_to_xy(lon: float, lat: float, origin_lon: float, origin_lat: float) -> tuple[float, float]:
-    meters_per_degree_lat = 111_320.0
-    meters_per_degree_lon = meters_per_degree_lat * math.cos(math.radians(origin_lat))
-    return (
-        (lon - origin_lon) * meters_per_degree_lon,
-        (lat - origin_lat) * meters_per_degree_lat,
-    )
-
-
-def xy_to_lonlat(x: float, y: float, origin_lon: float, origin_lat: float) -> tuple[float, float]:
-    meters_per_degree_lat = 111_320.0
-    meters_per_degree_lon = meters_per_degree_lat * math.cos(math.radians(origin_lat))
-    return (
-        origin_lon + x / meters_per_degree_lon,
-        origin_lat + y / meters_per_degree_lat,
-    )
-
-
-def nearest_stations(
-    stations: list[dict[str, str]],
-    longitude: float,
-    latitude: float,
-    count: int = 3,
-) -> list[dict[str, str]]:
-    return sorted(
-        stations,
-        key=lambda station: distance_m(longitude, latitude, float(station["longitude"]), float(station["latitude"])),
-    )[:count]
-
-
-def weighted_centroid_location(
-    anchors: list[dict[str, str]],
-    distance_estimates: list[float],
-) -> tuple[float, float]:
-    total_weight = 0.0
-    weighted_lon = 0.0
-    weighted_lat = 0.0
-    for station, distance_est in zip(anchors, distance_estimates):
-        weight = 1.0 / max(distance_est, 1.0)
-        weighted_lon += float(station["longitude"]) * weight
-        weighted_lat += float(station["latitude"]) * weight
-        total_weight += weight
-    if total_weight == 0:
-        return float(anchors[0]["longitude"]), float(anchors[0]["latitude"])
-    return weighted_lon / total_weight, weighted_lat / total_weight
-
-
-def least_squares_trilateration(
-    anchors: list[dict[str, str]],
-    distance_estimates: list[float],
-    fallback_lon: float,
-    fallback_lat: float,
-) -> tuple[float, float]:
-    if len(anchors) < 3:
-        return fallback_lon, fallback_lat
-
-    origin_lon = sum(float(station["longitude"]) for station in anchors) / len(anchors)
-    origin_lat = sum(float(station["latitude"]) for station in anchors) / len(anchors)
-    points = [
-        lonlat_to_xy(float(station["longitude"]), float(station["latitude"]), origin_lon, origin_lat)
-        for station in anchors
-    ]
-    x0, y0 = points[0]
-    r0 = distance_estimates[0]
-    normal_00 = normal_01 = normal_11 = 0.0
-    rhs_0 = rhs_1 = 0.0
-
-    for (xi, yi), ri in zip(points[1:], distance_estimates[1:]):
-        ai0 = 2 * (xi - x0)
-        ai1 = 2 * (yi - y0)
-        bi = xi * xi + yi * yi - ri * ri - x0 * x0 - y0 * y0 + r0 * r0
-        normal_00 += ai0 * ai0
-        normal_01 += ai0 * ai1
-        normal_11 += ai1 * ai1
-        rhs_0 += ai0 * bi
-        rhs_1 += ai1 * bi
-
-    determinant = normal_00 * normal_11 - normal_01 * normal_01
-    if abs(determinant) < 1e-6:
-        return weighted_centroid_location(anchors, distance_estimates)
-
-    x = (rhs_0 * normal_11 - rhs_1 * normal_01) / determinant
-    y = (normal_00 * rhs_1 - normal_01 * rhs_0) / determinant
-    return xy_to_lonlat(x, y, origin_lon, origin_lat)
-
-
 def triangulate_fault_location(
     fault_id: str,
     timestamp: str,
@@ -283,8 +194,9 @@ def triangulate_fault_location(
     base_rsrp: float,
     base_sinr: float,
 ) -> tuple[float, float, float, str, list[dict[str, str]]]:
-    anchors = nearest_stations(stations, truth_lon, truth_lat, count=3)
+    anchors = nearest_stations(stations, truth_lon, truth_lat, count=min(5, len(stations)))
     distance_estimates: list[float] = []
+    weights: list[float] = []
     observation_rows: list[dict[str, str]] = []
 
     for observation_index, station in enumerate(anchors, start=1):
@@ -293,7 +205,10 @@ def triangulate_fault_location(
         true_distance = distance_m(truth_lon, truth_lat, station_lon, station_lat)
         noise = rng.gauss(0, max(8.0, true_distance * 0.035))
         distance_est = max(10.0, true_distance + noise)
+        anchor_rsrp = clamp(base_rsrp - 20 * math.log10(max(distance_est, 10.0) / 100.0), -135, -55)
+        anchor_sinr = clamp(base_sinr - rng.uniform(0.4, 2.2), -12, 32)
         distance_estimates.append(distance_est)
+        weights.append(anchor_reliability_weight(distance_est, rsrp=anchor_rsrp, sinr=anchor_sinr))
         observation_rows.append(
             {
                 "observation_id": f"TRI_{fault_id}_{observation_index}",
@@ -305,12 +220,14 @@ def triangulate_fault_location(
                 "true_distance_m": fmt(true_distance),
                 "distance_est_m": fmt(distance_est),
                 "measurement_noise_m": fmt(distance_est - true_distance),
-                "rsrp": fmt(clamp(base_rsrp - 20 * math.log10(max(distance_est, 10.0) / 100.0), -135, -55)),
-                "sinr": fmt(clamp(base_sinr - rng.uniform(0.4, 2.2), -12, 32)),
+                "rsrp": fmt(anchor_rsrp),
+                "sinr": fmt(anchor_sinr),
             }
         )
 
-    estimated_lon, estimated_lat = least_squares_trilateration(anchors, distance_estimates, truth_lon, truth_lat)
+    estimated_lon, estimated_lat = weighted_least_squares_trilateration(
+        anchors, distance_estimates, weights, truth_lon, truth_lat
+    )
     error = distance_m(estimated_lon, estimated_lat, truth_lon, truth_lat)
     return estimated_lon, estimated_lat, error, anchors[0]["station_id"], observation_rows
 
