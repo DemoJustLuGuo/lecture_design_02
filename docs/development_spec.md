@@ -52,7 +52,7 @@
 
 | 任务 | 首选方案 | 备选方案 |
 | --- | --- | --- |
-| 异常检测 | IsolationForest | OneClassSVM、规则阈值 |
+| 异常检测 | 监督RF主通道 + 规则 + IsolationForest 辅助（融合） | 纯 IsolationForest、OneClassSVM |
 | 故障分类 | RandomForestClassifier | XGBoost、MLP |
 | 故障定位 | 加权质心定位 | 最近基站、三角定位 |
 | 诊断建议 | 规则引擎 | 规则引擎 + 置信度说明 |
@@ -61,7 +61,7 @@
 
 ## 3. 目标工程目录
 
-后续开发按以下目录组织。当前已有的 `src/` 空模块可在正式开发时迁移到 `backend/src/`。
+下列结构反映当前实际工程组织（旧的根级空 `src/` 骨架已删除）。
 
 ```text
 lecture_design_02/
@@ -70,40 +70,49 @@ lecture_design_02/
       api/
         app.py
         routes/
+          common.py
           dashboard.py
           stations.py
+          metrics.py
           faults.py
           diagnosis.py
           simulation.py
           model.py
       data_sim/
-        network_generator.py
-        fault_injector.py
+        synthetic_generator.py      # 合成基站/指标/故障/定位数据
+      data_ingestion/
+        build_phase2_dataset.py     # 由原始数据集构建 processed 数据
+        demo_loader.py              # 刷新演示 SQLite
+        external_importer.py        # 外部 CSV 导入
       feature_engine/
-        features.py
-        preprocessing.py
+        features.py                 # 特征定义、清洗、编码、标准化管线
       models/
-        anomaly_detector.py
-        fault_classifier.py
-        locator.py
-        train.py
-        evaluate.py
+        artifacts.py                # 模型工件加载与推理输入预处理（共享）
+        anomaly_detector.py         # 监督检测器+规则+IF构建，运行时融合 detect
+        fault_classifier.py         # RandomForest 构建 + 运行时 classify
+        locator.py                  # 定位几何（质心/三边）与误差计算
+        evaluate.py                 # 评估编排（指标 + 定位误差汇总）
+        train.py                    # 一键训练并保存模型、生成图表
       diagnosis/
-        rules.py
-        suggestions.py
+        rules.py                    # 规则诊断库
+        service.py                  # 组合故障/指标/定位/规则/LLM 诊断
+        llm_adapter.py              # OpenAI 兼容大模型增强适配
       database/
         schema.sql
-        db.py
-        repository.py
-      visualization/
-        charts.py
-        fault_map.py
+        db.py                       # 连接与 schema 初始化
+        init_db.py                  # 由 processed 数据写库
+        repository.py               # 仓储层（API 不直接拼 SQL）
       utils/
-        config.py
-        metrics.py
+        config.py                   # 统一路径配置（唯一路径来源）
+        metrics.py                  # 通用指标计算工具
+      visualization/
+        charts.py                   # 混淆矩阵、定位误差分布图
+        fault_map.py                # 基站/故障静态地图图
     data/
       raw/
       processed/
+      generated_preview/            # 设置页生成的预览批次（gitignore）
+      app.db                        # 运行态 SQLite
     saved_models/
     reports/
       figures/
@@ -113,17 +122,22 @@ lecture_design_02/
     package.json
     vite.config.ts
     src/
-      react/
-        api.ts
-        Dashboard.tsx
-        charts.tsx
-        types.ts
+      api/                          # Axios 接口封装
+      components/
+      pages/                        # 各路由页面
+      hooks/
+      router.tsx
       App.tsx
       main.tsx
 
   docs/
     development_spec.md
 ```
+
+> 路径约定：所有后端路径（数据、模型、报告、数据库、数据集根）统一由
+> `backend/src/utils/config.py` 提供，业务代码不再自行用
+> `Path(__file__).parents[N]` 推导路径。
+
 
 ## 4. 后端模块规范
 
@@ -166,15 +180,20 @@ lecture_design_02/
 
 位置：`backend/src/models/`
 
-模型模块分为三类：
+模型模块分为以下文件：
 
 | 文件 | 职责 |
 | --- | --- |
-| `anomaly_detector.py` | 训练和调用异常检测模型 |
-| `fault_classifier.py` | 训练和调用故障分类模型 |
-| `locator.py` | 估算故障坐标并计算定位误差 |
-| `train.py` | 一键训练并保存模型 |
-| `evaluate.py` | 输出准确率、召回率、F1、混淆矩阵、定位误差 |
+| `artifacts.py` | 模型工件加载、缓存与推理输入预处理（异常检测/分类共享） |
+| `anomaly_detector.py` | 异常检测融合：监督主通道(RF) + 规则KPI通道 + IsolationForest 辅助，运行时 `detect_anomalies` |
+| `fault_classifier.py` | 构建 RandomForest，运行时故障分类 `classify_faults`，输出置信度并按阈值(默认0.6)标记低置信度人工复核 |
+| `locator.py` | 定位几何（加权质心/加权最小二乘三边，含退化保护）与定位误差计算 |
+| `localization_benchmark.py` | 合成密集城区场景下的定位算法基准（课程主定位指标，可独立运行） |
+| `evaluate.py` | 评估编排：组合指标、定位误差(mean/median/P90)与分组交叉验证，输出评估字典 |
+| `train.py` | 一键训练并保存模型、生成报告图表，可独立运行 |
+
+通用指标（accuracy/precision/recall/F1、混淆矩阵、阈值选取）集中在
+`utils/metrics.py`；报告图表生成集中在 `visualization/`。
 
 模型文件统一保存到 `backend/saved_models/`，命名格式：
 
@@ -214,6 +233,11 @@ feature_pipeline.joblib
 4. `affected_scope`
 5. `review_required`
 6. `review_reason`
+
+> 安全说明：前端设置页将 LLM `api_key` 保存在浏览器 `localStorage`，仅用于课程
+> 设计离线演示，便于答辩现场快速配置。真实工程中 api_key 不应落入浏览器存储，
+> 应由后端代管，并配合鉴权、访问审计与密钥轮换；前端只传递不含密钥的调用请求。
+> 本地演示配置文件 `frontend/public/llm-config.local.json` 已加入 `.gitignore`，不会提交。
 
 ### 4.5 数据库模块
 
@@ -340,12 +364,40 @@ feature_pipeline.joblib
 | --- | --- | --- |
 | 异常检测 | accuracy、precision、recall、F1 | 检测准确率尽量达到 95% |
 | 故障分类 | accuracy、confusion matrix | 分类准确率尽量达到 90% |
-| 故障定位 | average localization error | 模拟无线场景中尽量控制在 50 米以内 |
-| 性能 | detection latency | 单批检测耗时可展示 |
+| 故障定位 | 定位误差 mean / median / P90 | 模拟无线场景中尽量控制在 50 米以内 |
+| 性能 | detection latency | 单批/单样本检测耗时可展示 |
 | 工程 | API 可用性 | 核心接口可通过测试或页面调用 |
 | 展示 | 页面完整性 | 至少 6 个核心页面可演示 |
 
 如果真实指标未达到目标，报告中必须解释原因，并给出优化方向。不要伪造测试结果。
+
+### 8.1 评估口径约定（重要）
+
+为避免指标偏乐观或口径混淆，评估遵循以下约定，`reports/model_evaluation.json` 据此产出：
+
+1. **检测/分类切分**：默认按 `scenario_id` 用 `StratifiedGroupKFold` 分组切分，
+   保证同一场景不同时落入训练/测试集。报告同时保留随机切分的
+   `in_distribution_reference` 作对照，用以量化数据泄漏对指标的抬升幅度
+   （本数据集上分类准确率从随机切分的约 99% 降到跨场景的约 50–75%，说明
+   TelecomTS 仅 33 个场景、故障类型与场景族强相关，跨场景泛化受数据限制）。
+2. **耗时口径**：`detection_latency_ms` 为真实单批推理耗时（含特征变换+打分），
+   并给出 `detection_latency_ms_per_sample`；训练耗时单列为 `training_time_ms`，
+   两者不可混用。
+3. **异常检测口径与方法**：检测采用"监督RF主通道 + 规则KPI通道 + IsolationForest
+   辅助"的三路融合，分数归一后加权求和，权重与阈值在验证集联合搜索（非 OR）。
+   检测特征只用数值 KPI + 派生特征，不含 station_id/cell_id。报告同样双口径：
+   `in_distribution_reference` 给出随机切分下的检测能力上限（监督通道可达约 98%，
+   显著高于纯 IsolationForest 的约 85%），`anomaly_detection` 给出跨场景分组口径
+   （阈值跨场景迁移受限，会出现召回偏高/精确率下降，需如实说明）。
+4. **定位误差两套口径**：
+   - `localization.public_proxy`：公开/Kaggle 路测点与参考工参点的代理误差，
+     仅作对照，如实说明其非完整定位算法输出；
+   - `localization.synthetic_algorithm`（**课程主定位指标**）：在带已知真值的
+     合成密集城区场景（约 3km×3km、~550m 站间距）上，用加权最小二乘三边定位
+     （≤5 锚点，按距离/RSRP/SINR 加权）输出 mean / median / P90 / max 误差。
+     可独立复现：`python -m backend.src.models.localization_benchmark`。
+   - 报告中“故障定位误差”应以 `synthetic_algorithm` 为准，因其具备明确真值与
+     完整定位算法链路。
 
 ## 9. 开发约定
 
@@ -406,7 +458,8 @@ feature_pipeline.joblib
 至少选择 2 到 3 个创新点写入报告和答辩材料：
 
 1. 规则阈值 + AI 模型的双通道异常检测。
-2. 故障分类结果输出置信度，低置信度故障标记为人工复核。
+2. 故障分类结果输出置信度，低置信度故障标记为人工复核（已实现：`classify_faults` 按
+   阈值输出 `review_required`/`review_reason`，评估报告含 `classification_review` 统计）。
 3. 故障地图展示定位误差范围。
 4. 基于历史日志统计高发基站、高发时段和高发故障类型。
 5. 移动端预警页面支持快速查看严重故障和处理建议。

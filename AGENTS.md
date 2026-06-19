@@ -56,23 +56,25 @@ Python + FastAPI + Uvicorn + NumPy + Pandas + Scikit-learn + XGBoost + SQLite + 
 
 ## 目标目录结构
 
-后续代码应逐步整理为以下结构：
+后端代码组织为以下结构：
 
 ```text
 lecture_design_02/
   backend/
     src/
-      api/
-      data_sim/
-      feature_engine/
-      models/
-      diagnosis/
-      database/
-      visualization/
-      utils/
+      api/            # FastAPI 应用与路由
+      data_sim/       # 合成数据生成
+      data_ingestion/ # 原始数据集构建、演示库刷新、外部 CSV 导入
+      feature_engine/ # 特征工程
+      models/         # 工件加载、异常检测、故障分类、定位、评估、训练
+      diagnosis/      # 规则诊断、诊断服务、LLM 增强适配
+      database/       # schema、连接、初始化、仓储层
+      utils/          # 统一路径配置与通用指标
+      visualization/  # 报告图表与故障地图
     data/
       raw/
       processed/
+      generated_preview/
     saved_models/
     reports/
       figures/
@@ -80,20 +82,19 @@ lecture_design_02/
 
   frontend/
     src/
-      api/
+      api/         # Axios 接口封装
       components/
-      views/
-      react/
-        api.ts
-        Dashboard.tsx
-        charts.tsx
-        types.ts
+      pages/       # 各路由页面
+      hooks/
+      router.tsx
+      App.tsx
+      main.tsx
 
   docs/
-    development_spec.md
 ```
 
-当前已有的旧 `src/` 空模块属于早期骨架。正式开发时，应优先按 `backend/` 和 `frontend/` 分离组织新代码。
+根级早期空 `src/` 骨架已删除，正式代码统一位于 `backend/` 和 `frontend/`。
+后端所有文件路径统一由 `backend/src/utils/config.py` 提供，禁止散落硬编码。
 
 ## 后端开发规则
 
@@ -103,12 +104,13 @@ lecture_design_02/
 | --- | --- |
 | `api/` | FastAPI 应用入口和路由 |
 | `data_sim/` | 基站、终端、网络指标和故障数据模拟 |
+| `data_ingestion/` | 原始数据集构建、演示库刷新、外部 CSV 导入 |
 | `feature_engine/` | 特征构造、清洗、编码、标准化和数据集划分 |
-| `models/` | 异常检测、故障分类、定位、训练和评估 |
-| `diagnosis/` | 诊断规则和处理建议 |
-| `database/` | SQLite schema、连接和 repository |
+| `models/` | 工件加载、异常检测、故障分类、定位、训练和评估 |
+| `diagnosis/` | 诊断规则、诊断服务和可选 LLM 增强 |
+| `database/` | SQLite schema、连接、初始化和 repository |
 | `visualization/` | 报告图表和故障地图生成 |
-| `utils/` | 配置、路径、通用指标工具 |
+| `utils/` | 统一路径配置（`config.py`）和通用指标工具（`metrics.py`） |
 
 ### 代码约定
 
@@ -127,7 +129,7 @@ lecture_design_02/
 
 | 任务 | 首选实现 |
 | --- | --- |
-| 异常检测 | IsolationForest |
+| 异常检测 | 监督RF主通道 + 规则 + IsolationForest 辅助（融合） |
 | 故障分类 | RandomForestClassifier |
 | 增强分类 | XGBoost |
 | 故障定位 | 加权质心定位 |

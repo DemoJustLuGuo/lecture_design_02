@@ -190,7 +190,7 @@ flowchart LR
 | --- | --- |
 | 数据采集与模拟模块 | `backend/src/data_ingestion/build_phase2_dataset.py` |
 | 特征工程 | `backend/src/feature_engine/features.py` |
-| 故障检测与分类训练 | `backend/src/models/train_phase2.py` |
+| 故障检测与分类训练 | `backend/src/models/train.py`、`anomaly_detector.py`、`fault_classifier.py`、`locator.py`、`evaluate.py` |
 | 诊断建议与大模型增强 | `backend/src/diagnosis/rules.py`, `backend/src/diagnosis/service.py`, `backend/src/diagnosis/llm_adapter.py` |
 | 数据库存储 | `backend/src/database/schema.sql`, `backend/src/database/init_db.py`, `backend/src/database/repository.py` |
 | 后端接口 | `backend/src/api/app.py`, `backend/src/api/routes/` |

@@ -137,7 +137,7 @@ python -m backend.src.data_ingestion.build_phase2_dataset
 训练异常检测和故障分类模型：
 
 ```powershell
-python -m backend.src.models.train_phase2
+python -m backend.src.models.train
 ```
 
 初始化 SQLite 数据库：

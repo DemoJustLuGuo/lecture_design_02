@@ -23,7 +23,7 @@ python -m backend.src.data_ingestion.build_phase2_dataset
 训练模型并生成评估结果：
 
 ```powershell
-python -m backend.src.models.train_phase2
+python -m backend.src.models.train
 ```
 
 运行后端测试：
