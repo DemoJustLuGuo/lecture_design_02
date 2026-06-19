@@ -278,9 +278,9 @@ export default function FaultLogs() {
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="font-headline-md text-headline-md text-on-surface">故障日志 (Fault Logs)</h2>
+          <h2 className="font-headline-md text-headline-md text-on-surface">故障日志</h2>
           <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
-            Browse and search network fault records.
+            查询 AI 识别和历史样本故障，跟踪处理状态并进入诊断流程。
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -288,28 +288,32 @@ export default function FaultLogs() {
             className="flex items-center gap-2 px-4 py-2 bg-primary-container text-primary border border-primary/20 rounded-lg text-body-sm font-body-sm hover:bg-primary-container/80 transition-colors shadow-sm"
             to="/settings"
           >
-            <span className="material-symbols-outlined text-[18px]">database</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">database</span>
             导入数据
           </Link>
-          <button
-            className="flex items-center gap-2 px-4 py-2 bg-surface border border-outline-variant rounded-lg text-body-sm font-body-sm text-on-surface hover:bg-surface-container-low transition-colors shadow-sm"
-            type="button"
-            onClick={handleExportCsv}
-          >
-            <span className="material-symbols-outlined text-[18px]">download</span>
-            导出 CSV
-          </button>
-          <button
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-body-sm font-body-sm hover:bg-primary/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
-            type="button"
-            onClick={handleRunAiClassification}
-            disabled={classifying}
-          >
-            <span className={`material-symbols-outlined text-[18px] ${classifying ? 'animate-spin-slow' : ''}`}>
-              {classifying ? 'progress_activity' : 'psychology'}
-            </span>
-            {classifying ? 'AI 分类中' : '执行 AI 分类'}
-          </button>
+          {!isEmptyDatabase ? (
+            <>
+              <button
+                className="flex items-center gap-2 px-4 py-2 bg-surface border border-outline-variant rounded-lg text-body-sm font-body-sm text-on-surface hover:bg-surface-container-low transition-colors shadow-sm"
+                type="button"
+                onClick={handleExportCsv}
+              >
+                <span aria-hidden="true" className="material-symbols-outlined text-[18px]">download</span>
+                导出 CSV
+              </button>
+              <button
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-body-sm font-body-sm hover:bg-primary/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+                type="button"
+                onClick={handleRunAiClassification}
+                disabled={classifying}
+              >
+                <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${classifying ? 'animate-spin-slow' : ''}`}>
+                  {classifying ? 'progress_activity' : 'psychology'}
+                </span>
+                {classifying ? 'AI 分类中' : '执行 AI 分类'}
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -322,13 +326,27 @@ export default function FaultLogs() {
               : 'bg-error-container border-error/30 text-on-error-container',
           ].join(' ')}
         >
-          <span className="material-symbols-outlined text-[18px]">
+          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
             {actionMessage.tone === 'success' ? 'check_circle' : 'error'}
           </span>
           <span>{actionMessage.text}</span>
         </div>
       ) : null}
 
+      {isEmptyDatabase ? (
+        <EmptyState
+          icon="history_toggle_off"
+          title="暂无故障日志"
+          description="当前系统还没有导入网络指标或生成故障分析结果。请先写入数据，再执行 AI 分类或查看诊断建议。"
+          actionLabel="前往系统设置"
+          actionTo="/settings"
+          secondaryActionLabel="地图框选生成"
+          secondaryActionTo="/map"
+        />
+      ) : null}
+
+      {!isEmptyDatabase ? (
+        <>
       {/* ── Filter Bar ───────────────────────────────────────── */}
       <div className="bg-surface border border-outline-variant rounded-xl p-4 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -340,7 +358,7 @@ export default function FaultLogs() {
               onChange={(e) => setTypeFilter(e.target.value as FaultTypeFilter)}
               className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
             >
-              <option value="all">所有类型 (All)</option>
+              <option value="all">所有类型</option>
               <option value="信道干扰">信道干扰</option>
               <option value="基站故障">基站故障</option>
               <option value="带宽不足">带宽不足</option>
@@ -358,7 +376,7 @@ export default function FaultLogs() {
               onChange={(e) => setSeverityFilter(e.target.value as SeverityFilter)}
               className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
             >
-              <option value="all">所有级别 (All)</option>
+              <option value="all">所有级别</option>
               <option value="critical">严重</option>
               <option value="warning">预警</option>
               <option value="info">一般</option>
@@ -373,7 +391,7 @@ export default function FaultLogs() {
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
             >
-              <option value="all">所有状态 (All)</option>
+              <option value="all">所有状态</option>
               <option value="未处理">未处理</option>
               <option value="处理中">处理中</option>
               <option value="已处理">已处理</option>
@@ -399,12 +417,12 @@ export default function FaultLogs() {
           <div className="flex flex-col gap-1.5">
             <label className="font-label-caps text-label-caps text-secondary uppercase">搜索</label>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+              <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                placeholder="Search by station ID or fault code..."
+                placeholder="搜索基站编号或故障编号"
                 type="text"
               />
             </div>
@@ -423,7 +441,7 @@ export default function FaultLogs() {
                 <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">
                   <div className="flex items-center gap-1">
                     检测时间
-                    <span className="material-symbols-outlined text-[16px] text-outline">arrow_downward</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-outline">arrow_downward</span>
                   </div>
                 </th>
                 <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">基站编号</th>
@@ -431,7 +449,7 @@ export default function FaultLogs() {
                 <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">
                   <div className="flex items-center gap-1">
                     严重程度
-                    <span className="material-symbols-outlined text-[16px] text-outline">unfold_more</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-outline">unfold_more</span>
                   </div>
                 </th>
                 <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">置信度</th>
@@ -456,7 +474,7 @@ export default function FaultLogs() {
                           : 'bg-surface-container text-on-surface-variant border border-outline-variant',
                       ].join(' ')}
                     >
-                      <span className="material-symbols-outlined text-[14px]">
+                      <span aria-hidden="true" className="material-symbols-outlined text-[14px]">
                         {isAiFault(fault) ? 'psychology' : 'history'}
                       </span>
                       {isAiFault(fault) ? 'AI识别' : '历史样本'}
@@ -466,7 +484,7 @@ export default function FaultLogs() {
                   <td className="py-3 px-4 font-data-mono text-data-mono text-on-surface">{fault.station_id || '--'}</td>
                   <td className="py-3 px-4">
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-error-container/50 text-on-error-container text-[11px] font-semibold border border-error/20">
-                      <span className="material-symbols-outlined text-[14px]">{faultTypeIcon(fault.fault_type_cn)}</span>
+                      <span aria-hidden="true" className="material-symbols-outlined text-[14px]">{faultTypeIcon(fault.fault_type_cn)}</span>
                       {fault.fault_type_cn || '--'}
                     </span>
                   </td>
@@ -499,7 +517,7 @@ export default function FaultLogs() {
                           onClick={(event) => handleUpdateStatus(event, fault, action.status)}
                           disabled={updatingFaultId === fault.fault_id}
                         >
-                          <span className={`material-symbols-outlined text-[14px] ${updatingFaultId === fault.fault_id ? 'animate-spin-slow' : ''}`}>
+                          <span aria-hidden="true" className={`material-symbols-outlined text-[14px] ${updatingFaultId === fault.fault_id ? 'animate-spin-slow' : ''}`}>
                             {updatingFaultId === fault.fault_id ? 'progress_activity' : action.icon}
                           </span>
                           {action.label}
@@ -514,7 +532,7 @@ export default function FaultLogs() {
                         }}
                         aria-label="查看诊断"
                       >
-                        <span className="material-symbols-outlined text-[20px]">troubleshoot</span>
+                        <span aria-hidden="true" className="material-symbols-outlined text-[20px]">troubleshoot</span>
                       </button>
                     </div>
                   </td>
@@ -549,7 +567,7 @@ export default function FaultLogs() {
         {/* Pagination footer */}
         <div className="border-t border-outline-variant bg-surface px-4 py-3 flex items-center justify-between">
           <span className="font-body-sm text-body-sm text-on-surface-variant">
-            Showing {pageStart} to {pageEnd} of {filteredFaults.length} entries
+            显示第 {pageStart} 至 {pageEnd} 条，共 {filteredFaults.length} 条
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -558,7 +576,7 @@ export default function FaultLogs() {
               disabled={currentPage <= 1}
               onClick={() => setPage((value) => Math.max(1, value - 1))}
             >
-              <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">chevron_left</span>
             </button>
             <span className="min-w-20 text-center font-data-mono text-data-mono text-on-surface-variant">
               {currentPage} / {totalPages}
@@ -569,11 +587,13 @@ export default function FaultLogs() {
               disabled={currentPage >= totalPages}
               onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
             >
-              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">chevron_right</span>
             </button>
           </div>
         </div>
       </div>
+        </>
+      ) : null}
     </div>
   )
 }

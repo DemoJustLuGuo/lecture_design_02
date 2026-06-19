@@ -368,48 +368,58 @@ export default function Dashboard() {
             当前演示库状态、故障趋势和最新告警。
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={handleRefreshDemoData}
-            disabled={busy}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant bg-surface px-4 py-2 text-body-sm font-body-sm text-on-surface shadow-sm transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-70"
+        {isEmptyDatabase ? (
+          <Link
+            to="/settings"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-body-sm font-body-sm text-on-primary shadow-sm transition-colors hover:bg-primary/90"
           >
-            <span className={`material-symbols-outlined text-[18px] ${refreshingDemo ? 'animate-spin-slow' : ''}`}>
-              {refreshingDemo ? 'progress_activity' : 'database'}
-            </span>
-            {refreshingDemo ? '刷新中' : '刷新演示数据'}
-          </button>
-          <button
-            type="button"
-            onClick={handleGenerateDemoData}
-            disabled={busy}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-body-sm font-body-sm text-on-primary shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <span className={`material-symbols-outlined text-[18px] ${generatingDemo ? 'animate-spin-slow' : ''}`}>
-              {generatingDemo ? 'progress_activity' : 'auto_awesome'}
-            </span>
-            {generatingDemo ? '生成中' : '重新生成数据'}
-          </button>
-          <button
-            type="button"
-            onClick={() => importInputRef.current?.click()}
-            disabled={busy}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-body-sm font-body-sm text-primary shadow-sm transition-colors hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <span className={`material-symbols-outlined text-[18px] ${importingDemo ? 'animate-spin-slow' : ''}`}>
-              {importingDemo ? 'progress_activity' : 'upload_file'}
-            </span>
-            {importingDemo ? '导入中' : '导入 CSV'}
-          </button>
-          <input
-            ref={importInputRef}
-            className="hidden"
-            type="file"
-            accept=".csv,text/csv"
-            onChange={handleImportFileChange}
-          />
-        </div>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">database</span>
+            进入数据准备
+          </Link>
+        ) : (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={handleRefreshDemoData}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant bg-surface px-4 py-2 text-body-sm font-body-sm text-on-surface shadow-sm transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${refreshingDemo ? 'animate-spin-slow' : ''}`}>
+                {refreshingDemo ? 'progress_activity' : 'database'}
+              </span>
+              {refreshingDemo ? '刷新中' : '刷新演示数据'}
+            </button>
+            <button
+              type="button"
+              onClick={handleGenerateDemoData}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-body-sm font-body-sm text-on-primary shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${generatingDemo ? 'animate-spin-slow' : ''}`}>
+                {generatingDemo ? 'progress_activity' : 'auto_awesome'}
+              </span>
+              {generatingDemo ? '生成中' : '重新生成数据'}
+            </button>
+            <button
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-body-sm font-body-sm text-primary shadow-sm transition-colors hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${importingDemo ? 'animate-spin-slow' : ''}`}>
+                {importingDemo ? 'progress_activity' : 'upload_file'}
+              </span>
+              {importingDemo ? '导入中' : '导入 CSV'}
+            </button>
+            <input
+              ref={importInputRef}
+              className="hidden"
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleImportFileChange}
+            />
+          </div>
+        )}
       </div>
 
       {simulationResult || simulationError ? (
@@ -423,7 +433,7 @@ export default function Dashboard() {
         >
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-start gap-2">
-              <span className="material-symbols-outlined text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                 {simulationError || refreshResult?.database_refreshed === false ? 'error' : 'check_circle'}
               </span>
               <div>
@@ -540,7 +550,7 @@ export default function Dashboard() {
                 disabled={persistingGeneratedDemo}
                 aria-label="关闭生成预览"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
@@ -598,7 +608,7 @@ export default function Dashboard() {
                 onClick={handlePersistGeneratedDemo}
                 disabled={persistingGeneratedDemo}
               >
-                <span className={`material-symbols-outlined text-[18px] ${persistingGeneratedDemo ? 'animate-spin-slow' : ''}`}>
+                <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${persistingGeneratedDemo ? 'animate-spin-slow' : ''}`}>
                   {persistingGeneratedDemo ? 'progress_activity' : 'database'}
                 </span>
                 {persistingGeneratedDemo ? '写入中' : '写入 SQLite 并刷新总览'}
@@ -632,52 +642,54 @@ export default function Dashboard() {
         </EmptyState>
       ) : null}
 
-      {/* ── Row 1: Metric Cards ─────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        <MetricCard
-          label="在线基站数"
-          value={stationValue}
-          icon="wifi"
-          iconColor="text-emerald-600"
-          trend={isEmptyDatabase ? undefined : { direction: 'up', value: '2%', color: 'text-emerald-600' }}
-        />
-        <MetricCard
-          label="当前告警数"
-          value={faultValue}
-          icon="warning"
-          iconColor="text-amber-500"
-          trend={isEmptyDatabase ? undefined : { direction: 'down', value: '5%', color: 'text-emerald-600' }}
-        />
-        <MetricCard
-          label="严重故障数"
-          value={severeValue}
-          icon="error"
-          iconColor="text-error"
-          errorVariant
-        />
-        <MetricCard
-          label="检测准确率"
-          value={summary?.classification_accuracy == null ? '--' : accuracyValue}
-          icon="troubleshoot"
-          iconColor="text-cyan-600"
-        />
-      </div>
+      {!isEmptyDatabase ? (
+        <>
+          {/* ── Row 1: Metric Cards ─────────────────────────────── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+            <MetricCard
+              label="在线基站数"
+              value={stationValue}
+              icon="wifi"
+              iconColor="text-emerald-600"
+              trend={{ direction: 'up', value: '2%', color: 'text-emerald-600' }}
+            />
+            <MetricCard
+              label="当前告警数"
+              value={faultValue}
+              icon="warning"
+              iconColor="text-amber-500"
+              trend={{ direction: 'down', value: '5%', color: 'text-emerald-600' }}
+            />
+            <MetricCard
+              label="严重故障数"
+              value={severeValue}
+              icon="error"
+              iconColor="text-error"
+              errorVariant
+            />
+            <MetricCard
+              label="检测准确率"
+              value={summary?.classification_accuracy == null ? '--' : accuracyValue}
+              icon="troubleshoot"
+              iconColor="text-cyan-600"
+            />
+          </div>
 
-      {/* ── Row 2: Charts ───────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
-        {/* Left Chart – Trend */}
-        <ChartPanel title="故障数量趋势" className="lg:col-span-2 !h-[360px]">
-          <div ref={trendRef} className="w-full h-full" />
-        </ChartPanel>
+          {/* ── Row 2: Charts ───────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+            {/* Left Chart – Trend */}
+            <ChartPanel title="故障数量趋势" className="lg:col-span-2 !h-[360px]">
+              <div ref={trendRef} className="w-full h-full" />
+            </ChartPanel>
 
-        {/* Right Chart – Donut */}
-        <ChartPanel title="故障类型分布" className="lg:col-span-1 !h-[360px]">
-          <div ref={pieRef} className="w-full h-full" />
-        </ChartPanel>
-      </div>
+            {/* Right Chart – Donut */}
+            <ChartPanel title="故障类型分布" className="lg:col-span-1 !h-[360px]">
+              <div ref={pieRef} className="w-full h-full" />
+            </ChartPanel>
+          </div>
 
-      {/* ── Row 3: Alert Table ───────────────────────────────── */}
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-lg shadow-sm overflow-hidden flex flex-col">
+          {/* ── Row 3: Alert Table ───────────────────────────────── */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-lg shadow-sm overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-card-padding border-b border-outline-variant flex justify-between items-center bg-surface-bright">
           <h2 className="font-headline-md text-headline-md text-on-surface">实时告警列表</h2>
@@ -686,7 +698,7 @@ export default function Dashboard() {
             className="text-primary font-label-caps text-label-caps hover:text-primary-fixed-dim flex items-center gap-1 transition-colors"
           >
             查看全部
-            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">arrow_forward</span>
           </Link>
         </div>
 
@@ -739,7 +751,9 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
-      </div>
+          </div>
+        </>
+      ) : null}
     </div>
   )
 }
