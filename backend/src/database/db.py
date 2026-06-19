@@ -3,10 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-
-BACKEND_ROOT = Path(__file__).resolve().parents[2]
-DATABASE_PATH = BACKEND_ROOT / "data" / "app.db"
-SCHEMA_PATH = Path(__file__).with_name("schema.sql")
+from backend.src.utils.config import DATABASE_PATH, SCHEMA_PATH
 
 
 def get_connection(db_path: Path = DATABASE_PATH) -> sqlite3.Connection:

@@ -803,11 +803,11 @@ def build_dataset(datasets_root: Path, output_dir: Path) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    project_root = Path(__file__).resolve().parents[5]
-    backend_root = Path(__file__).resolve().parents[2]
+    from backend.src.utils.config import DATASETS_ROOT, PROCESSED_DIR
+
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--datasets-root", type=Path, default=project_root / "参考文件" / "datasets")
-    parser.add_argument("--output-dir", type=Path, default=backend_root / "data" / "processed")
+    parser.add_argument("--datasets-root", type=Path, default=DATASETS_ROOT)
+    parser.add_argument("--output-dir", type=Path, default=PROCESSED_DIR)
     return parser.parse_args()
 
 

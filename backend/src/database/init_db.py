@@ -7,7 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from backend.src.database.db import BACKEND_ROOT, DATABASE_PATH, get_connection, initialize_schema
+from backend.src.database.db import DATABASE_PATH, get_connection, initialize_schema
+from backend.src.utils.config import PROCESSED_DIR, REPORTS_DIR
 
 
 def to_float(value: Any) -> float | None:
@@ -223,8 +224,8 @@ def initialize_database(db_path: Path, processed_dir: Path, reports_dir: Path) -
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Initialize SQLite database from phase-2 outputs.")
     parser.add_argument("--db-path", type=Path, default=DATABASE_PATH)
-    parser.add_argument("--processed-dir", type=Path, default=BACKEND_ROOT / "data" / "processed")
-    parser.add_argument("--reports-dir", type=Path, default=BACKEND_ROOT / "reports")
+    parser.add_argument("--processed-dir", type=Path, default=PROCESSED_DIR)
+    parser.add_argument("--reports-dir", type=Path, default=REPORTS_DIR)
     return parser.parse_args()
 
 

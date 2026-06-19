@@ -10,7 +10,8 @@ from backend.src.api.routes.common import success
 from backend.src.data_ingestion.demo_loader import refresh_demo_database
 from backend.src.data_ingestion.external_importer import import_external_network_data
 from backend.src.data_sim.synthetic_generator import generate_synthetic_processed_dataset
-from backend.src.database.db import BACKEND_ROOT, DATABASE_PATH
+from backend.src.database.db import DATABASE_PATH
+from backend.src.utils.config import BACKEND_ROOT
 
 
 router = APIRouter(tags=["simulation"])

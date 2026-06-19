@@ -7,12 +7,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from backend.src.database.db import BACKEND_ROOT, DATABASE_PATH, get_connection
+from backend.src.database.db import DATABASE_PATH, get_connection
 from backend.src.database.init_db import initialize_database
+from backend.src.utils.config import PROCESSED_DIR, REPORTS_DIR
 
 
-PROCESSED_DIR = BACKEND_ROOT / "data" / "processed"
-REPORTS_DIR = BACKEND_ROOT / "reports"
 REQUIRED_PROCESSED_FILES = {
     "network_metrics.csv",
     "fault_samples.csv",
