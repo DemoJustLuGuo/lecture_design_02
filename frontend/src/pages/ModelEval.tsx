@@ -160,7 +160,7 @@ export default function ModelEval() {
     return (
       <div className="max-w-[1440px] mx-auto space-y-gutter animate-fade-in">
         <div className="flex items-center justify-center h-[400px] text-on-surface-variant font-body-md">
-          <span className="material-symbols-outlined animate-pulse-scale mr-2">progress_activity</span>
+          <span aria-hidden="true" className="material-symbols-outlined animate-pulse-scale mr-2">progress_activity</span>
           加载模型评估数据...
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function ModelEval() {
     return (
       <div className="max-w-[1440px] mx-auto space-y-gutter animate-fade-in">
         <div className="flex items-center justify-center h-[400px] text-error font-body-md">
-          <span className="material-symbols-outlined mr-2">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined mr-2">error</span>
           {error}
         </div>
       </div>
@@ -182,7 +182,7 @@ export default function ModelEval() {
     return (
       <div className="max-w-[1440px] mx-auto space-y-gutter animate-fade-in">
         <div>
-          <h3 className="font-headline-md text-headline-md text-on-surface">整体性能指标 (Overall Performance)</h3>
+          <h3 className="font-headline-md text-headline-md text-on-surface">整体性能指标</h3>
           <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
             当前还没有模型评估记录。
           </p>
@@ -205,15 +205,15 @@ export default function ModelEval() {
       {/* ── Section Header ────────────────────────────────── */}
       <div className="flex justify-between items-end mb-4">
         <div>
-          <h3 className="font-headline-md text-headline-md text-on-surface">整体性能指标 (Overall Performance)</h3>
-          <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">基准测试集评估结果 - Target: &gt;95%</p>
+          <h3 className="font-headline-md text-headline-md text-on-surface">整体性能指标</h3>
+          <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">基准测试集评估结果，目标：95% 以上</p>
         </div>
         <button
           className="bg-surface border border-outline-variant text-on-surface px-4 py-2 rounded font-label-caps text-label-caps hover:bg-surface-container-low transition-colors flex items-center gap-2"
           type="button"
           onClick={handleExportReport}
         >
-          <span className="material-symbols-outlined text-[16px]">download</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">download</span>
           导出报告
         </button>
       </div>
@@ -224,8 +224,8 @@ export default function ModelEval() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col relative overflow-hidden group">
           <div className={`absolute top-0 left-0 w-1 h-full ${isBelow(accuracy) ? 'bg-chart-yellow' : 'bg-chart-green'}`} />
           <div className="flex justify-between items-start mb-2">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Accuracy</span>
-            <span className={`material-symbols-outlined text-[18px] ${isBelow(accuracy) ? 'text-chart-yellow' : 'text-chart-green'}`}>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">准确率</span>
+            <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${isBelow(accuracy) ? 'text-chart-yellow' : 'text-chart-green'}`}>
               {isBelow(accuracy) ? 'warning' : 'check_circle'}
             </span>
           </div>
@@ -233,7 +233,7 @@ export default function ModelEval() {
             {accDisplay}
           </div>
           <div className="flex items-center gap-2 mt-auto pt-2 border-t border-surface-container-high">
-            <span className={`font-data-mono font-body-sm ${isBelow(accuracy) ? 'text-chart-yellow' : 'text-chart-green'}`}>Target: 95%</span>
+            <span className={`font-data-mono font-body-sm ${isBelow(accuracy) ? 'text-chart-yellow' : 'text-chart-green'}`}>目标 95%</span>
             <span className="font-data-mono text-body-sm text-on-surface-variant ml-auto">
               {isBelow(accuracy) ? `${(accuracy - target).toFixed(2)}%` : '+'}
             </span>
@@ -244,8 +244,8 @@ export default function ModelEval() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col relative overflow-hidden group">
           <div className={`absolute top-0 left-0 w-1 h-full ${isBelow(precision) ? 'bg-chart-yellow' : 'bg-chart-green'}`} />
           <div className="flex justify-between items-start mb-2">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Precision</span>
-            <span className={`material-symbols-outlined text-[18px] ${isBelow(precision) ? 'text-chart-yellow' : 'text-chart-green'}`}>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">精确率</span>
+            <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${isBelow(precision) ? 'text-chart-yellow' : 'text-chart-green'}`}>
               {isBelow(precision) ? 'warning' : 'check_circle'}
             </span>
           </div>
@@ -253,7 +253,7 @@ export default function ModelEval() {
             {precDisplay}
           </div>
           <div className="flex items-center gap-2 mt-auto pt-2 border-t border-surface-container-high">
-            <span className={`font-data-mono font-body-sm ${isBelow(precision) ? 'text-chart-yellow' : 'text-chart-green'}`}>Target: 95%</span>
+            <span className={`font-data-mono font-body-sm ${isBelow(precision) ? 'text-chart-yellow' : 'text-chart-green'}`}>目标 95%</span>
             <span className="font-data-mono text-body-sm text-on-surface-variant ml-auto">
               {isBelow(precision) ? `${(precision - target).toFixed(2)}%` : '+'}
             </span>
@@ -264,8 +264,8 @@ export default function ModelEval() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col relative overflow-hidden group">
           <div className={`absolute top-0 left-0 w-1 h-full ${isBelow(recall) ? 'bg-chart-yellow' : 'bg-chart-green'}`} />
           <div className="flex justify-between items-start mb-2">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Recall</span>
-            <span className={`material-symbols-outlined text-[18px] ${isBelow(recall) ? 'text-chart-yellow' : 'text-chart-green'}`}>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">召回率</span>
+            <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${isBelow(recall) ? 'text-chart-yellow' : 'text-chart-green'}`}>
               {isBelow(recall) ? 'warning' : 'check_circle'}
             </span>
           </div>
@@ -273,7 +273,7 @@ export default function ModelEval() {
             {recDisplay}
           </div>
           <div className="flex items-center gap-2 mt-auto pt-2 border-t border-surface-container-high">
-            <span className={`font-data-mono font-body-sm ${isBelow(recall) ? 'text-chart-yellow' : 'text-chart-green'}`}>Target: 95%</span>
+            <span className={`font-data-mono font-body-sm ${isBelow(recall) ? 'text-chart-yellow' : 'text-chart-green'}`}>目标 95%</span>
             <span className="font-data-mono text-body-sm text-on-surface-variant ml-auto">
               {isBelow(recall) ? `${(recall - target).toFixed(2)}%` : '+'}
             </span>
@@ -284,8 +284,8 @@ export default function ModelEval() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col relative overflow-hidden group">
           <div className={`absolute top-0 left-0 w-1 h-full ${isBelow(f1) ? 'bg-chart-yellow' : 'bg-chart-green'}`} />
           <div className="flex justify-between items-start mb-2">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">F1 Score</span>
-            <span className={`material-symbols-outlined text-[18px] ${isBelow(f1) ? 'text-chart-yellow' : 'text-chart-green'}`}>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">F1 值</span>
+            <span aria-hidden="true" className={`material-symbols-outlined text-[18px] ${isBelow(f1) ? 'text-chart-yellow' : 'text-chart-green'}`}>
               {isBelow(f1) ? 'warning' : 'check_circle'}
             </span>
           </div>
@@ -293,7 +293,7 @@ export default function ModelEval() {
             {f1Display}
           </div>
           <div className="flex items-center gap-2 mt-auto pt-2 border-t border-surface-container-high">
-            <span className={`font-data-mono font-body-sm ${isBelow(f1) ? 'text-chart-yellow' : 'text-chart-green'}`}>Target: 95%</span>
+            <span className={`font-data-mono font-body-sm ${isBelow(f1) ? 'text-chart-yellow' : 'text-chart-green'}`}>目标 95%</span>
             <span className="font-data-mono text-body-sm text-on-surface-variant ml-auto">
               {isBelow(f1) ? `${(f1 - target).toFixed(2)}%` : '+'}
             </span>
@@ -303,13 +303,13 @@ export default function ModelEval() {
 
       {/* ── Row 2: Macro Average ──────────────────────────── */}
       <div className="mt-8 mb-4">
-        <h4 className="font-headline-md text-[16px] text-on-surface">宏观平均 (Macro Average - Optimal)</h4>
+        <h4 className="font-headline-md text-[16px] text-on-surface">宏平均指标</h4>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        <MacroMetricCard label="Macro Accuracy" value={99.12} />
-        <MacroMetricCard label="Macro Precision" value={99.45} />
-        <MacroMetricCard label="Macro Recall" value={99.08} />
-        <MacroMetricCard label="Macro F1" value={99.26} />
+        <MacroMetricCard label="宏平均准确率" value={99.12} />
+        <MacroMetricCard label="宏平均精确率" value={99.45} />
+        <MacroMetricCard label="宏平均召回率" value={99.08} />
+        <MacroMetricCard label="宏平均 F1" value={99.26} />
       </div>
 
       {/* ── Row 3: Confusion Matrix + Positioning Error ──── */}
@@ -318,10 +318,10 @@ export default function ModelEval() {
         <div className="lg:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-xl flex flex-col">
           <div className="p-card-padding border-b border-outline-variant flex justify-between items-center bg-surface/50 rounded-t-xl">
             <div>
-              <h4 className="font-headline-md text-[16px] text-on-surface">混淆矩阵 (Confusion Matrix)</h4>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Top 5 Fault Categories</p>
+              <h4 className="font-headline-md text-[16px] text-on-surface">混淆矩阵</h4>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">前 5 类故障分类结果</p>
             </div>
-            <span className="material-symbols-outlined text-outline">grid_on</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-outline">grid_on</span>
           </div>
           <div className="p-card-padding flex-1 flex items-center justify-center overflow-x-auto">
             <div className="inline-grid grid-cols-[auto_repeat(5,1fr)] grid-rows-[auto_repeat(5,1fr)] gap-1 text-center font-data-mono font-body-sm">
@@ -349,12 +349,12 @@ export default function ModelEval() {
         <div className="lg:col-span-5 bg-surface-container-lowest border border-outline-variant rounded-xl flex flex-col">
           <div className="p-card-padding border-b border-outline-variant flex justify-between items-start bg-surface/50 rounded-t-xl">
             <div>
-              <h4 className="font-headline-md text-[16px] text-on-surface">定位误差 (Positioning Error)</h4>
+              <h4 className="font-headline-md text-[16px] text-on-surface">定位误差</h4>
               <p className="font-body-sm text-body-sm text-on-surface-variant">距离分布直方图</p>
             </div>
             <div className="text-right">
               <div className="font-data-mono text-[20px] font-bold text-error">{localizationError.toFixed(2)}m</div>
-              <div className="font-label-caps text-label-caps text-on-surface-variant">Avg Error</div>
+              <div className="font-label-caps text-label-caps text-on-surface-variant">平均误差</div>
             </div>
           </div>
           <div className="p-card-padding flex-1">

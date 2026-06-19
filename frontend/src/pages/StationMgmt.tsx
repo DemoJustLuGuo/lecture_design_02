@@ -22,28 +22,28 @@ function getStationStatusBadge(status: string | null): {
         bg: 'bg-emerald-100',
         text: 'text-emerald-800',
         dot: 'bg-emerald-500',
-        label: '正常 (Normal)',
+        label: '正常',
       }
     case StationStatus.Warning:
       return {
         bg: 'bg-amber-100',
         text: 'text-amber-800',
         dot: 'bg-amber-500',
-        label: '预警 (Warning)',
+        label: '预警',
       }
     case StationStatus.Severe:
       return {
         bg: 'bg-error-container',
         text: 'text-on-error-container',
         dot: 'bg-error',
-        label: '严重 (Severe)',
+        label: '严重',
       }
     case StationStatus.Offline:
       return {
         bg: 'bg-surface-variant',
         text: 'text-on-surface-variant',
         dot: 'bg-outline',
-        label: '离线 (Offline)',
+        label: '离线',
       }
     default:
       return {
@@ -139,20 +139,20 @@ export default function StationMgmt() {
       {/* ── Header & Filter Bar ──────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="font-headline-md text-headline-md text-on-surface tracking-tight">基站管理 (Base Station Management)</h2>
+          <h2 className="font-headline-md text-headline-md text-on-surface tracking-tight">基站管理</h2>
           <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
-            Manage and monitor gNodeB operational status.
+            管理和查看 gNodeB 工参、位置与运行状态。
           </p>
         </div>
         <div className="flex items-center gap-3">
           {/* Search input */}
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+            <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-4 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary w-48 transition-all"
-              placeholder="Search ID or Name"
+              placeholder="搜索基站编号或名称"
               type="text"
             />
           </div>
@@ -163,11 +163,11 @@ export default function StationMgmt() {
             onChange={(e) => setStatusFilter(e.target.value as StatusFilterValue)}
             className="py-2 pl-3 pr-8 border border-outline-variant rounded-lg bg-surface-container-lowest text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary appearance-none text-on-surface"
           >
-            <option value="all">All Status (全部)</option>
-            <option value="normal">Normal (正常)</option>
-            <option value="warning">Warning (预警)</option>
-            <option value="severe">Severe (严重)</option>
-            <option value="offline">Offline (离线)</option>
+            <option value="all">全部状态</option>
+            <option value="normal">正常</option>
+            <option value="warning">预警</option>
+            <option value="severe">严重</option>
+            <option value="offline">离线</option>
           </select>
 
           <Link
@@ -175,7 +175,7 @@ export default function StationMgmt() {
             to="/settings"
             title="基站由模拟生成或外部导入产生，请在系统设置中写入演示数据。"
           >
-            <span className="material-symbols-outlined text-[18px]">upload_file</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">upload_file</span>
             导入数据
           </Link>
         </div>
@@ -187,13 +187,13 @@ export default function StationMgmt() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-outline-variant bg-surface text-secondary font-label-caps text-label-caps uppercase tracking-wider">
-                <th className="px-6 py-4 font-semibold">基站编号 (ID)</th>
-                <th className="px-6 py-4 font-semibold">基站名称 (gNodeB ID)</th>
+                <th className="px-6 py-4 font-semibold">基站编号</th>
+                <th className="px-6 py-4 font-semibold">gNodeB ID</th>
                 <th className="px-6 py-4 font-semibold">PCI</th>
-                <th className="px-6 py-4 font-semibold">经度 (Lon)</th>
-                <th className="px-6 py-4 font-semibold">纬度 (Lat)</th>
-                <th className="px-6 py-4 font-semibold">状态 (Status)</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                <th className="px-6 py-4 font-semibold">经度</th>
+                <th className="px-6 py-4 font-semibold">纬度</th>
+                <th className="px-6 py-4 font-semibold">状态</th>
+                <th className="px-6 py-4 font-semibold text-right">操作</th>
               </tr>
             </thead>
             <tbody className="text-body-sm font-body-sm divide-y divide-outline-variant/50">
@@ -227,7 +227,7 @@ export default function StationMgmt() {
                           navigate(`/stations/${station.station_id}`)
                         }}
                       >
-                        <span className="material-symbols-outlined text-[16px]">visibility</span>
+                        <span aria-hidden="true" className="material-symbols-outlined text-[16px]">visibility</span>
                         查看
                       </button>
                     </td>
@@ -261,9 +261,9 @@ export default function StationMgmt() {
         {/* Pagination */}
         <div className="border-t border-outline-variant bg-surface px-6 py-4 flex items-center justify-between">
           <p className="text-body-sm font-body-sm text-on-surface-variant">
-            Showing <span className="font-semibold text-on-surface">{pageStart}</span> to{' '}
-            <span className="font-semibold text-on-surface">{pageEnd}</span> of{' '}
-            <span className="font-semibold text-on-surface">{filteredStations.length}</span> entries
+            显示第 <span className="font-semibold text-on-surface">{pageStart}</span> 至{' '}
+            <span className="font-semibold text-on-surface">{pageEnd}</span> 条，共{' '}
+            <span className="font-semibold text-on-surface">{filteredStations.length}</span> 条
           </p>
           <div className="flex items-center space-x-2">
             <button
@@ -272,7 +272,7 @@ export default function StationMgmt() {
               disabled={currentPage <= 1}
               onClick={() => setPage((value) => Math.max(1, value - 1))}
             >
-              <span className="material-symbols-outlined text-[18px] align-middle">chevron_left</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px] align-middle">chevron_left</span>
             </button>
             <span className="min-w-20 text-center font-data-mono text-data-mono text-on-surface-variant">
               {currentPage} / {totalPages}
@@ -283,7 +283,7 @@ export default function StationMgmt() {
               disabled={currentPage >= totalPages}
               onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
             >
-              <span className="material-symbols-outlined text-[18px] align-middle">chevron_right</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px] align-middle">chevron_right</span>
             </button>
           </div>
         </div>

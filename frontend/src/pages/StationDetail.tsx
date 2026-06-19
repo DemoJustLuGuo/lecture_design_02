@@ -18,6 +18,19 @@ function severityToStatus(level: string | null): 'critical' | 'warning' | 'info'
   return 'offline'
 }
 
+function statusText(status?: string | null): string {
+  if (!status) return '未知'
+  const normalized = status.toLowerCase()
+  if (normalized.includes('active') || normalized.includes('normal') || status.includes('正常')) return '正常'
+  if (normalized.includes('warning') || status.includes('预警')) return '预警'
+  if (normalized.includes('critical') || normalized.includes('severe') || status.includes('严重')) return '严重'
+  if (normalized.includes('offline') || status.includes('离线')) return '离线'
+  if (normalized.includes('resolved') || normalized.includes('completed') || status.includes('已处理')) return '已处理'
+  if (normalized.includes('processing') || status.includes('处理中')) return '处理中'
+  if (normalized.includes('pending') || normalized.includes('open') || status.includes('待处理')) return '待处理'
+  return status
+}
+
 /* ── Main Page ──────────────────────────────────────────── */
 
 export default function StationDetailPage() {
@@ -156,7 +169,7 @@ export default function StationDetailPage() {
     return (
       <div className="max-w-7xl mx-auto space-y-gutter animate-fade-in">
         <div className="flex items-center justify-center h-[400px] text-on-surface-variant font-body-md">
-          <span className="material-symbols-outlined animate-pulse-scale mr-2">progress_activity</span>
+          <span aria-hidden="true" className="material-symbols-outlined animate-pulse-scale mr-2">progress_activity</span>
           加载基站数据...
         </div>
       </div>
@@ -191,18 +204,18 @@ export default function StationDetailPage() {
         <div className="flex items-center justify-between mb-4 border-b border-outline-variant pb-4">
           <div>
             <h2 className="font-headline-md text-headline-md text-on-surface">基站详情</h2>
-            <p className="font-body-sm text-body-sm text-secondary mt-1">Base Station Overview</p>
+            <p className="font-body-sm text-body-sm text-secondary mt-1">基站工参、位置与状态概览</p>
           </div>
           <div className="flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-full border border-outline-variant">
             <div className={`w-2.5 h-2.5 rounded-full ${isStationActive ? 'bg-[#10B981]' : 'bg-on-surface-variant'}`} />
-            <span className="font-label-caps text-label-caps text-on-surface">{station.status ?? 'UNKNOWN'}</span>
+            <span className="font-label-caps text-label-caps text-on-surface">{statusText(station.status)}</span>
           </div>
         </div>
 
         {/* 4-column grid (2 cols mobile, 4 cols desktop) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
-            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">ID</span>
+            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">基站编号</span>
             <span className="font-data-mono text-data-mono text-on-surface">{station.station_id}</span>
           </div>
           <div>
@@ -214,25 +227,25 @@ export default function StationDetailPage() {
             <span className="font-data-mono text-data-mono text-on-surface">{station.pci ?? '-'}</span>
           </div>
           <div>
-            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">Status</span>
-            <span className={`font-data-mono text-data-mono ${statusColor}`}>{station.status ?? '-'}</span>
+            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">状态</span>
+            <span className={`font-data-mono text-data-mono ${statusColor}`}>{statusText(station.status)}</span>
           </div>
           <div>
-            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">Lon/Lat</span>
+            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">经纬度</span>
             <span className="font-data-mono text-data-mono text-on-surface">
               {station.longitude ?? '-'} / {station.latitude ?? '-'}
             </span>
           </div>
           <div>
-            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">Azimuth</span>
+            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">方位角</span>
             <span className="font-data-mono text-data-mono text-on-surface">{station.azimuth != null ? `${station.azimuth}°` : '-'}</span>
           </div>
           <div>
-            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">Height</span>
+            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">天线高度</span>
             <span className="font-data-mono text-data-mono text-on-surface">{station.height != null ? `${station.height}m` : '-'}</span>
           </div>
           <div>
-            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">Power</span>
+            <span className="font-label-caps text-label-caps text-secondary block mb-1 uppercase">发射功率</span>
             <span className="font-data-mono text-data-mono text-on-surface">{station.tx_power != null ? `${station.tx_power} dBm` : '-'}</span>
           </div>
         </div>
@@ -267,12 +280,12 @@ export default function StationDetailPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low border-b border-outline-variant">
-                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">Time</th>
-                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">Severity</th>
-                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">Fault Code</th>
-                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">Description</th>
-                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">Status</th>
-                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider text-right">Action</th>
+                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">时间</th>
+                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">严重程度</th>
+                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">故障编号</th>
+                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">故障描述</th>
+                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider">处理状态</th>
+                <th className="py-3 px-4 font-label-caps text-label-caps text-secondary uppercase tracking-wider text-right">操作</th>
               </tr>
             </thead>
             <tbody className="font-body-sm text-body-sm text-on-surface">
@@ -287,7 +300,7 @@ export default function StationDetailPage() {
                     <td className="py-3 px-4">{fault.fault_type_cn ?? fault.fault_type_raw ?? '-'}</td>
                     <td className="py-3 px-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-variant text-secondary">
-                        {fault.status ?? '-'}
+                        {statusText(fault.status)}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
@@ -296,7 +309,7 @@ export default function StationDetailPage() {
                         onClick={() => navigate(`/faults/${fault.fault_id}/diagnosis`)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-primary hover:bg-primary-container transition-colors font-body-sm text-body-sm"
                       >
-                        <span className="material-symbols-outlined text-[16px]">troubleshoot</span>
+                        <span aria-hidden="true" className="material-symbols-outlined text-[16px]">troubleshoot</span>
                         查看诊断
                       </button>
                     </td>

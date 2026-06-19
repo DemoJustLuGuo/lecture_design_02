@@ -338,7 +338,7 @@ export default function Settings() {
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-[22px]">route</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-primary text-[22px]">route</span>
               <h2 className="font-title-lg text-title-lg text-on-surface">演示流程状态</h2>
             </div>
             <p className="mt-1 font-body-sm text-body-sm text-on-surface-variant">
@@ -394,7 +394,7 @@ export default function Settings() {
             </div>
           </div>
           <div className="rounded-lg border border-outline-variant bg-surface px-3 py-2">
-            <div className="font-label-caps text-[10px] text-on-surface-variant uppercase">LLM</div>
+            <div className="font-label-caps text-[10px] text-on-surface-variant uppercase">大模型</div>
             <div className="font-data-mono text-data-mono text-on-surface">{hasLlmConfig ? '已配置' : '未配置'}</div>
           </div>
         </div>
@@ -406,12 +406,12 @@ export default function Settings() {
 
       <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-card-padding">
         <div className="mb-4 flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[22px]">auto_awesome</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-primary text-[22px]">auto_awesome</span>
           <h2 className="font-title-lg text-title-lg text-on-surface">大模型 API 设置</h2>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <label className="flex flex-col gap-1.5">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Base URL</span>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">接口地址</span>
             <input
               className="rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 text-body-sm font-body-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               value={llmConfig.base_url}
@@ -420,7 +420,7 @@ export default function Settings() {
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Model</span>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">模型</span>
             <input
               className="rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 text-body-sm font-body-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               value={llmConfig.model}
@@ -429,7 +429,7 @@ export default function Settings() {
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Timeout</span>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">超时时间</span>
             <input
               className="rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 text-body-sm font-body-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               type="number"
@@ -440,7 +440,7 @@ export default function Settings() {
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">API Key</span>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">API 密钥</span>
             <input
               className="rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 text-body-sm font-body-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               value={llmConfig.api_key}
@@ -475,7 +475,7 @@ export default function Settings() {
 
       <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-card-padding">
         <div className="mb-4 flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[22px]">database</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-primary text-[22px]">database</span>
           <h2 className="font-title-lg text-title-lg text-on-surface">数据表管理</h2>
         </div>
 
@@ -533,7 +533,7 @@ export default function Settings() {
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="font-label-caps text-[10px] text-on-surface-variant uppercase">Seed</span>
+                <span className="font-label-caps text-[10px] text-on-surface-variant uppercase">随机种子</span>
                 <input
                   className="rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 text-body-sm"
                   type="number"
